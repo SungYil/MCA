@@ -12,6 +12,7 @@ export default function StockDetailPage() {
     const [loading, setLoading] = useState<boolean>(true);
     const [report, setReport] = useState<string | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleGenerateReport = async () => {
         setIsAnalyzing(true);
@@ -34,6 +35,38 @@ export default function StockDetailPage() {
             setIsAnalyzing(false);
         }
     };
+
+    useEffect(() => {
+        if (!ticker) return;
+
+        // Dynamically determine API URL based on current hostname
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+
+        fetch(`${API_URL}/api/stocks/${ticker}/full`)
+            .then((res) => {
+                if (!res.ok) throw new Error('Failed to fetch stock data');
+                return res.json();
+            })
+            .then((jsonData) => {
+                setData(jsonData);
+                setLoading(false);
+            })
+            .catch((err) => {
+                console.error(err);
+                setError(err.message);
+                setLoading(false);
+            });
+    }, [ticker]);
+
+    if (loading) return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading...</div>;
+    // Error state is handled securely
+    if (!data && !loading) return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">No Data Found</div>;
+    if (!data) return null;
+
+    const { profile, price, dividends } = data;
+    const isPositive = price.change >= 0;
 
     return (
         <main className="min-h-screen bg-gray-900 text-white p-6 md:p-12">
@@ -108,8 +141,8 @@ export default function StockDetailPage() {
                                 <button
                                     onClick={handleGenerateReport}
                                     className={`px-4 py-2 rounded-md transition-colors ${isAnalyzing
-                                            ? 'bg-purple-800 text-gray-300 cursor-wait'
-                                            : 'bg-purple-600 hover:bg-purple-700 text-white'
+                                        ? 'bg-purple-800 text-gray-300 cursor-wait'
+                                        : 'bg-purple-600 hover:bg-purple-700 text-white'
                                         }`}
                                     disabled={isAnalyzing}
                                 >
