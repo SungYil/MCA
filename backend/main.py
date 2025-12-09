@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 from models import schema
-from routers import stocks
+from routers import stocks, watchlist
 
 # Create tables on startup
 Base.metadata.create_all(bind=engine)
@@ -11,6 +11,7 @@ app = FastAPI(title="Investment Assistant Backend")
 
 # REST API Routers
 app.include_router(stocks.router)
+app.include_router(watchlist.router)
 
 
 # Configure CORS

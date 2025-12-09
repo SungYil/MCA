@@ -13,6 +13,7 @@ export default function StockDetailPage() {
     const [report, setReport] = useState<string | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [isInWatchlist, setIsInWatchlist] = useState<boolean>(false);
 
     const handleGenerateReport = async () => {
         setIsAnalyzing(true);
@@ -33,6 +34,46 @@ export default function StockDetailPage() {
             alert('Failed to generate report. Please try again.');
         } finally {
             setIsAnalyzing(false);
+        }
+    };
+
+    const toggleWatchlist = async () => {
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+
+        try {
+            if (isInWatchlist) {
+                await fetch(`${API_URL}/api/watchlist/${ticker}`, { method: 'DELETE' });
+                setIsInWatchlist(false);
+            } else {
+                await fetch(`${API_URL}/api/watchlist`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticker }),
+                });
+                setIsInWatchlist(true);
+            }
+        } catch (err) {
+            console.error('Failed to toggle watchlist', err);
+            alert('Failed to update watchlist');
+        }
+    };
+
+    const checkWatchlistStatus = async () => {
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+
+        try {
+            const res = await fetch(`${API_URL}/api/watchlist`);
+            if (res.ok) {
+                const list = await res.json();
+                const exists = list.some((item: any) => item.ticker === ticker);
+                setIsInWatchlist(exists);
+            }
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -58,6 +99,8 @@ export default function StockDetailPage() {
                 setError(err.message);
                 setLoading(false);
             });
+
+        checkWatchlistStatus();
     }, [ticker]);
 
     if (loading) return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading...</div>;
@@ -77,6 +120,13 @@ export default function StockDetailPage() {
                         <div className="flex items-center gap-3">
                             <h1 className="text-4xl font-bold">{profile.ticker}</h1>
                             <span className="text-sm px-2 py-1 bg-gray-800 rounded text-gray-400">{profile.sector}</span>
+                            <button
+                                onClick={toggleWatchlist}
+                                className="ml-2 text-2xl focus:outline-none transition-transform hover:scale-110"
+                                title={isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                            >
+                                {isInWatchlist ? "⭐" : "☆"}
+                            </button>
                         </div>
                         <h2 className="text-xl text-gray-400 mt-1">{profile.name}</h2>
                     </div>
