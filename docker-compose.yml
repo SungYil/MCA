@@ -18,7 +18,7 @@ services:
 
   # Backend Service
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: mca_backend
@@ -26,6 +26,7 @@ services:
       - ./backend:/app
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/mca_db
+      - GEMINI_API_KEY=${GEMINI_API_KEY} # Add this line
     ports:
       - "8000:8000"
     depends_on:
@@ -51,6 +52,7 @@ services:
 
 volumes:
   postgres_data:
+
 
 networks:
   mca_network:
