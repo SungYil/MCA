@@ -203,22 +203,15 @@ curl http://localhost:8000/api/health
 - [x] Frontend 기본 대시보드 (Backend 연결 테스트)
 - [x] EC2 배포 가이드 작성
 - [x] PostgreSQL 연결 및 DB 스키마 설계 (`User`, `Stock`, `Portfolio`, `Watchlist`)
+- [x] 주식 데이터 수집 API 구현 (Mock: Tiingo/SEC 대체)
 
-## 🗄️ 데이터베이스 스키마
+## 📡 API 엔드포인트 (신규)
 
-**1. Users (사용자)**
-- `id`, `username`
-- `risk_tolerance` (Low, Medium, High)
-- `preferred_sectors`, `avoided_sectors` (JSON)
-
-**2. Stocks (주식 종목)**
-- `ticker` (PK), `name`, `sector`
-- `current_price`, `dividend_yield`, `market_cap`
-- `ai_summary`, `quality_score` (LLM 분석 결과 캐싱)
-
-**3. Portfolio & Watchlist**
-- `PortfolioItem`: `user_id`, `ticker`, `shares`, `average_cost`
-- `WatchlistItem`: `user_id`, `ticker`
+**Stock Endpoints (`/api/stocks`)**
+- `GET /api/stocks/{ticker}/profile`: 기업 개요 (섹터, 설명, 시총)
+- `GET /api/stocks/{ticker}/price`: 현재 가격, 변동률
+- `GET /api/stocks/{ticker}/dividends`: 배당 내역 및 수익률
+- `GET /api/stocks/{ticker}/full`: 위 모든 정보를 한 번에 조회
 
 ### 🚧 진행 예정
 - [ ] PostgreSQL 연결 및 DB 스키마 설계
