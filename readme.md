@@ -202,6 +202,23 @@ curl http://localhost:8000/api/health
 - [x] Backend Health Check API (`/api/health`)
 - [x] Frontend 기본 대시보드 (Backend 연결 테스트)
 - [x] EC2 배포 가이드 작성
+- [x] PostgreSQL 연결 및 DB 스키마 설계 (`User`, `Stock`, `Portfolio`, `Watchlist`)
+
+## 🗄️ 데이터베이스 스키마
+
+**1. Users (사용자)**
+- `id`, `username`
+- `risk_tolerance` (Low, Medium, High)
+- `preferred_sectors`, `avoided_sectors` (JSON)
+
+**2. Stocks (주식 종목)**
+- `ticker` (PK), `name`, `sector`
+- `current_price`, `dividend_yield`, `market_cap`
+- `ai_summary`, `quality_score` (LLM 분석 결과 캐싱)
+
+**3. Portfolio & Watchlist**
+- `PortfolioItem`: `user_id`, `ticker`, `shares`, `average_cost`
+- `WatchlistItem`: `user_id`, `ticker`
 
 ### 🚧 진행 예정
 - [ ] PostgreSQL 연결 및 DB 스키마 설계
