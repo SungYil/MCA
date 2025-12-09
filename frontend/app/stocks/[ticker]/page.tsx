@@ -15,8 +15,10 @@ export default function StockDetailPage() {
     useEffect(() => {
         if (!ticker) return;
 
-        // Use Environment variable or default to localhost for development
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        // Dynamically determine API URL based on current hostname
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
 
         fetch(`${API_URL}/api/stocks/${ticker}/full`)
             .then((res) => {
