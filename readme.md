@@ -201,6 +201,7 @@ curl http://localhost:8000/api/health
 - [x] Docker 및 Docker Compose 설정
 - [x] Backend Health Check API (`/api/health`)
 - [x] Frontend 기본 대시보드 (Backend 연결 테스트)
+- [x] Frontend 종목 상세 페이지 (`/stocks/[ticker]`)
 - [x] EC2 배포 가이드 작성
 - [x] PostgreSQL 연결 및 DB 스키마 설계 (`User`, `Stock`, `Portfolio`, `Watchlist`)
 - [x] 주식 데이터 수집 API 구현 (Mock: Tiingo/SEC 대체)
