@@ -7,7 +7,13 @@ export default function Home() {
   const [error, setError] = useState<boolean>(false);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/health')
+    // Dynamically determine API URL based on current hostname
+    // This allows it to work on localhost and EC2 without ENV changes
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const API_URL = `${protocol}//${hostname}:8000`;
+
+    fetch(`${API_URL}/api/health`)
       .then((res) => res.json())
       .then((data) => {
         setStatus(data.message);
