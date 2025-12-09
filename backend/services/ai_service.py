@@ -21,7 +21,7 @@ class AIService:
     """
 
     def __init__(self):
-        self.model_name = "gemini-pro"
+        self.model_name = "gemini-1.5-flash"
         # Safety settings can be adjusted here
         pass
 
