@@ -11,6 +11,27 @@ router = APIRouter(
     tags=["watchlist"],
 )
 
+class WatchlistAddRequest(BaseModel):
+    ticker: str
+
+class WatchlistItemResponse(BaseModel):
+    id: int
+    ticker: str
+    user_id: int
+
+    class Config:
+        from_attributes = True
+
+@router.get("/", response_model=List[WatchlistItemResponse])
+def get_watchlist(db: Session = Depends(get_db)):
+    """
+    Get all items in the watchlist for the current user.
+    (MVP: Hardcoded user_id = 1)
+    """
+    user_id = 1 # Mock user ID
+    items = db.query(WatchlistItem).filter(WatchlistItem.user_id == user_id).all()
+    return items
+
 @router.post("/", response_model=WatchlistItemResponse)
 def add_to_watchlist(request: WatchlistAddRequest, db: Session = Depends(get_db)):
     """
