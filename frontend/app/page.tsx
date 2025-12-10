@@ -82,7 +82,7 @@ export default function Home() {
 
       <div className="mt-12 grid text-center lg:max-w-5xl lg:w-full lg:grid-cols-2 lg:text-left gap-4">
 
-        <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
+        <a href="/portfolio" className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
           <h2 className="mb-3 text-2xl font-semibold">
             Portfolio{' '}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
@@ -92,7 +92,7 @@ export default function Home() {
           <p className="m-0 max-w-[30ch] text-sm opacity-50">
             View your holdings and performance.
           </p>
-        </div>
+        </a>
 
         <div className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30">
           <h2 className="mb-3 text-2xl font-semibold">
