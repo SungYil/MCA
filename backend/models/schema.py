@@ -13,7 +13,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True, default="me") # Single user for now
+    username = Column(String, unique=True, index=True) 
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
     risk_tolerance = Column(Enum(RiskTolerance), default=RiskTolerance.MEDIUM)
     preferred_sectors = Column(JSON, default=[]) # e.g. ["Technology", "Healthcare"]
     avoided_sectors = Column(JSON, default=[])   # e.g. ["Energy"]
