@@ -25,6 +25,35 @@ export default function PortfolioPage() {
     const [shares, setShares] = useState('');
     const [avgCost, setAvgCost] = useState('');
 
+    // AI Analysis State
+    const [analysis, setAnalysis] = useState<string | null>(null);
+    const [analyzing, setAnalyzing] = useState(false);
+
+    const handleAnalyze = async () => {
+        setAnalyzing(true);
+        setAnalysis(null);
+
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+        const token = localStorage.getItem('token');
+
+        try {
+            const res = await fetch(`${API_URL}/api/portfolio/analyze`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) throw new Error('Analysis failed');
+            const data = await res.json();
+            setAnalysis(data.analysis);
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -118,7 +147,34 @@ export default function PortfolioPage() {
     return (
         <main className="min-h-screen bg-gray-900 text-white p-6 md:p-12">
             <div className="max-w-6xl mx-auto">
-                <h1 className="text-3xl font-bold mb-8 text-emerald-400">My Portfolio</h1>
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold text-emerald-400">My Portfolio</h1>
+                    <button
+                        onClick={handleAnalyze}
+                        disabled={analyzing || items.length === 0}
+                        className={`px-6 py-2 rounded font-bold transition-colors ${analyzing || items.length === 0
+                                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg'
+                            }`}
+                    >
+                        {analyzing ? 'AI Analyzing...' : '✨ Generate AI Report'}
+                    </button>
+                </div>
+
+                {/* AI Analysis Result */}
+                {analysis && (
+                    <div className="bg-gray-800/80 border border-purple-500/30 p-8 rounded-lg mb-12 shadow-2xl animate-fade-in">
+                        <h2 className="text-2xl font-bold mb-6 flex items-center">
+                            <span className="text-3xl mr-3">🤖</span>
+                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                                AI Portfolio Analyst Report
+                            </span>
+                        </h2>
+                        <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed whitespace-pre-wrap">
+                            {analysis}
+                        </div>
+                    </div>
+                )}
 
                 {/* Summary Card */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">

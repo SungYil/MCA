@@ -118,6 +118,52 @@ Write in a professional yet easy-to-read tone (polite Korean ~해요체 or ~합�
 """
         return prompt
 
+    async def analyze_portfolio(self, portfolio_items: List[Dict[str, Any]], user_profile: Dict[str, Any]) -> str:
+        """
+        Generates a personalized daily advice report based on the user's portfolio.
+        """
+        try:
+            # 1. Summarize Portfolio Context
+            holdings_text = ""
+            total_value = 0
+            for item in portfolio_items:
+                value = item['shares'] * item['current_price']
+                total_value += value
+                holdings_text += f"- {item['ticker']}: {item['shares']} shares @ ${item['average_cost']:.2f} (Current: ${item['current_price']:.2f}, Val: ${value:.2f})\n"
+
+            # 2. Build Prompt
+            prompt = f"""
+[SYSTEM ROLE]
+You are a highly experienced personal investment consultant.
+Your client has a specific stock portfolio and wants daily advice and a health check.
+Answer MUST be in Korean.
+
+[CLIENT PROFILE]
+- Risk Tolerance: {user_profile.get('risk_tolerance', 'Medium')}
+- Investment Goal: {user_profile.get('goal', 'Balanced Growth and Income')}
+
+[PORTFOLIO SUMMARY]
+Total Value: ${total_value:.2f}
+Holdings:
+{holdings_text}
+
+[INSTRUCTIONS]
+Based on the portfolio above, provide a comprehensive analysis:
+1. **포트폴리오 건전성 진단**: 현재 구성이 안정적인지, 너무 한 섹터에 쏠려있지 않은지 평가.
+2. **오늘의 핵심 조언**: 현재 시장 상황(가정)에서 이 포트폴리오가 주의해야 할 점 1가지.
+3. **종목별 코멘트**: 주요 보유 종목(비중 큰 순서대로 2~3개)에 대한 짧은 진단 (홀드/매수/매도 관점).
+4. **리밸런싱 제안**: 더 추가하면 좋을 섹터나 종목 추천.
+
+Write in a warm, encouraging, but professional tone (Korean ~해요체).
+"""
+            # 3. Call LLM
+            response_text = await self._call_gemini(prompt)
+            return response_text
+
+        except Exception as e:
+            logger.error(f"Error analyzing portfolio: {str(e)}")
+            return "포트폴리오 분석 중 오류가 발생했습니다."
+
     async def _call_gemini(self, prompt: str) -> str:
         """
         Executes the API call to Gemini.

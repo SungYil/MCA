@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import schema
 from routers.auth import get_current_user
-from services import stock_service
+from services import stock_service, ai_service
 from pydantic import BaseModel
 from typing import List
 
@@ -18,6 +18,9 @@ class PortfolioAddRequest(BaseModel):
     shares: float
     average_cost: float
 
+class PortfolioAnalysisResponse(BaseModel):
+    analysis: str
+
 class PortfolioItemResponse(BaseModel):
     id: int
     ticker: str
@@ -30,6 +33,47 @@ class PortfolioItemResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+@router.post("/analyze", response_model=PortfolioAnalysisResponse)
+async def analyze_portfolio(
+    db: Session = Depends(get_db), 
+    current_user: schema.User = Depends(get_current_user)
+):
+    """
+    Triggers AI analysis for the current user's portfolio.
+    """
+    # 1. Fetch Portfolio Items
+    items = db.query(schema.PortfolioItem).filter(schema.PortfolioItem.user_id == current_user.id).all()
+    
+    if not items:
+        return {"analysis": "포트폴리오가 비어있어 분석할 수 없습니다. 종목을 먼저 추가해주세요!"}
+
+    portfolio_data = []
+    for item in items:
+        # Fetch current price for accurate valuation
+        try:
+            price_info = stock_service.get_stock_price(item.ticker)
+            current_price = price_info.get("price", 0.0)
+        except:
+            current_price = 0.0
+            
+        portfolio_data.append({
+            "ticker": item.ticker,
+            "shares": item.shares,
+            "average_cost": item.average_cost,
+            "current_price": current_price
+        })
+
+    # 2. Fetch User Profile
+    user_profile = {
+        "risk_tolerance": current_user.risk_tolerance,
+        # "goal": current_user.investment_goal # assuming this field exists or defaults
+    }
+
+    # 3. Call AI Service
+    analysis_text = await ai_service.ai_service.analyze_portfolio(portfolio_data, user_profile)
+    
+    return {"analysis": analysis_text}
 
 @router.get("/", response_model=List[PortfolioItemResponse])
 def get_portfolio(
