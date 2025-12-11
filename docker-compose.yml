@@ -32,6 +32,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/mca_db
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - TIINGO_API_KEY=${TIINGO_API_KEY}
     ports:
       - "8000:8000"
     depends_on:

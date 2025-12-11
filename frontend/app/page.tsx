@@ -8,8 +8,14 @@ export default function Home() {
   const [watchlist, setWatchlist] = useState<any[]>([]);
 
   useEffect(() => {
+    // 1. Strict Auth Check
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login'; // Force redirect using window.location to avoid flash
+      return;
+    }
+
     // Dynamically determine API URL based on current hostname
-    // This allows it to work on localhost and EC2 without ENV changes
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
     const API_URL = `${protocol}//${hostname}:8000`;
