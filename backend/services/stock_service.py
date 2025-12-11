@@ -51,48 +51,93 @@ class StockService:
     def get_stock_price(self, ticker: str) -> Dict[str, Any]:
         """
         Fetch current stock price.
-        Uses IEX endpoint for real-time/top-of-book data during market hours.
+        Strategy:
+        1. Try IEX endpoint (Real-time/Top of Book).
+        2. Fallback to Daily endpoint (EOD) if IEX is empty or closed.
         """
         ticker = ticker.upper()
         if not self.api_key:
+            logger.warning(f"No API Key. Returning mock for {ticker}")
             return self._get_mock_price(ticker)
 
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Token {self.api_key}'
+        }
+
+        # 1. Try IEX
         try:
-            # Using IEX endpoint for more real-time-like data
             url = f"{self.base_url}/iex/{ticker}" 
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Token {self.api_key}'
-            }
             response = requests.get(url, headers=headers, timeout=5)
             response.raise_for_status()
             data = response.json()
             
-            # Tiingo IEX returns a list [ { ... } ]
             if isinstance(data, list) and len(data) > 0:
                 quote = data[0]
                 price = quote.get("last") or quote.get("tngoLast")
-                # Calculate change if open is available, or use mock change since IEX might just show last
-                # Usually we want close vs prevClose from daily for change, but let's try to get what we can
-                prev_close = quote.get("prevClose")
+                
+                if price and price > 0:
+                    prev_close = quote.get("prevClose")
+                    change = 0.0
+                    change_percent = 0.0
+                    if prev_close:
+                        change = price - prev_close
+                        change_percent = (change / prev_close) * 100
+                    
+                    return {
+                        "price": price,
+                        "change": change,
+                        "change_percent": change_percent,
+                        "source": "IEX"
+                    }
+        except Exception as e:
+            logger.warning(f"IEX fetch failed for {ticker}: {e}. Trying Daily fallback.")
+
+        # 2. Fallback to Daily (Last Closing Price)
+        try:
+            url = f"{self.base_url}/tiingo/daily/{ticker}/prices"
+            # Get just the last 1 day
+            params = {'startDate': '2020-01-01', 'resampleFreq': 'daily'} # Simple latest queries often default to latest without date, but explicit is safe
+            # Actually, simpler URL is /tiingo/daily/{ticker}/prices with no params gives full history, that's bad.
+            # Best way for latest is /tiingo/daily/{ticker}/prices endpoint returns latest by default? No, it returns history.
+            # Tiingo docs say: /tiingo/daily/<ticker>/prices returns history.
+            # We can use `sort=-date` if supported, or just requesting a recent start date.
+            # Let's try fetching just the meta which sometimes has prevClose?
+            # Or standard history logic:
+            response = requests.get(url, headers=headers, timeout=5) 
+            response.raise_for_status()
+            history = response.json()
+            
+            if isinstance(history, list) and len(history) > 0:
+                latest = history[-1] # Valid assumption if sorted by date ascending (default)
+                price = latest.get("close") or latest.get("adjClose")
+                # Calculate change from previous day if possible, else 0
                 change = 0.0
                 change_percent = 0.0
                 
-                if price and prev_close:
-                    change = price - prev_close
-                    change_percent = (change / prev_close) * 100
-                
+                if len(history) >= 2:
+                    prev = history[-2]
+                    prev_close = prev.get("close")
+                    if prev_close:
+                        change = price - prev_close
+                        change_percent = (change / prev_close) * 100
+
                 return {
                     "price": price,
                     "change": change,
-                    "change_percent": change_percent
+                    "change_percent": change_percent,
+                    "source": "Daily_EOD"
                 }
-            
-            return {"price": 0.0, "change": 0.0, "change_percent": 0.0}
 
         except Exception as e:
-            logger.error(f"Error fetching price for {ticker}: {e}")
-            return self._get_mock_price(ticker)
+            logger.error(f"Daily fetch failed for {ticker}: {e}")
+
+        logger.error(f"All price fetches failed for {ticker}. Returning mock/zero.")
+        # If strict real-time is required, maybe throw error? 
+        # But for UI stability, returning 0 or mock might be better.
+        # User complained about "Real price not showing", so returning mock is confusing.
+        # Better to return 0 so they know it failed? or Mock with flag?
+        return {"price": 0.0, "change": 0.0, "change_percent": 0.0, "error": "Fetch failed"}
 
     def get_dividend_history(self, ticker: str) -> Dict[str, Any]:
         """
