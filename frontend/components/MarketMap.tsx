@@ -90,7 +90,6 @@ export default function MarketMap({ data }: MarketMapProps) {
             children: data.map(item => ({
                 name: item.ticker,
                 size: item.weight, // Used for area size
-                change_percent: item.change_percent, // Custom prop for color
                 ...item
             }))
         }
