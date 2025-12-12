@@ -189,24 +189,89 @@ def add_to_portfolio(
             average_cost=new_item.average_cost
         )
 
-@router.delete("/{ticker}")
-def remove_from_portfolio(
-    ticker: str, 
-    db: Session = Depends(get_db),
+class DividendItemResponse(BaseModel):
+    ticker: str
+    shares: float
+    div_yield: float
+    annual_income: float
+    frequency: str
+    last_payment_date: str
+    last_payment_amount: float
+
+class DividendProjectionResponse(BaseModel):
+    total_annual_income: float
+    monthly_average: float
+    items: List[DividendItemResponse]
+
+@router.get("/dividends", response_model=DividendProjectionResponse)
+def get_dividend_projection(
+    db: Session = Depends(get_db), 
     current_user: schema.User = Depends(get_current_user)
 ):
     """
-    Remove a stock completely from portfolio.
+    Get detailed dividend projection for the portfolio.
+    Calculates estimated annual income based on current yield/history.
     """
-    ticker = ticker.upper()
-    item = db.query(schema.PortfolioItem).filter(
-        schema.PortfolioItem.user_id == current_user.id,
-        schema.PortfolioItem.ticker == ticker
-    ).first()
-
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found in portfolio")
-
-    db.delete(item)
-    db.commit()
-    return {"message": "Item removed", "ticker": ticker}
+    items = db.query(schema.PortfolioItem).filter(schema.PortfolioItem.user_id == current_user.id).all()
+    
+    projection_items = []
+    total_annual = 0.0
+    
+    for item in items:
+        # Fetch dividend history
+        # Optimization: In real app, cache this heavily.
+        div_info = stock_service.get_dividend_history(item.ticker)
+        
+        # Calculate Income
+        # Method 1: Yield * Current Value (Market approach)
+        # Method 2: Annualized Last Div * Shares (Cashflow approach) -> More accurate for investor
+        
+        # Let's use Method 2 if history exists, else Method 1 fallback
+        annual_income_per_share = 0.0
+        last_date = "-"
+        last_amount = 0.0
+        
+        history = div_info.get("history", [])
+        frequency = div_info.get("frequency", "Irregular")
+        
+        if history and len(history) > 0:
+            last_div = history[0] # Most recent
+            last_amount = last_div.get("amount", 0.0)
+            last_date = last_div.get("date", "-")[:10]
+            
+            # Annualize based on frequency
+            multiplier = 0
+            if frequency == "Monthly": multiplier = 12
+            elif frequency == "Quarterly": multiplier = 4
+            elif frequency == "Annual": multiplier = 1
+            elif frequency == "Irregular": 
+                # Sum last 365 days
+                from datetime import datetime, timedelta
+                cutoff = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+                annual_income_per_share = sum(d['amount'] for d in history if d.get('date') >= cutoff)
+            
+            if multiplier > 0:
+                annual_income_per_share = last_amount * multiplier
+        else:
+            # Fallback to Yield if no history but yield exists (e.g. from profile?)
+            # Currently our get_dividend_history calculates yield from history, so if history is empty, yield is 0.
+            pass
+            
+        estimated_income = annual_income_per_share * item.shares
+        total_annual += estimated_income
+        
+        projection_items.append(DividendItemResponse(
+            ticker=item.ticker,
+            shares=item.shares,
+            div_yield=div_info.get("div_yield", 0.0),
+            annual_income=round(estimated_income, 2),
+            frequency=frequency,
+            last_payment_date=last_date,
+            last_payment_amount=last_amount
+        ))
+        
+    return DividendProjectionResponse(
+        total_annual_income=round(total_annual, 2),
+        monthly_average=round(total_annual / 12, 2),
+        items=projection_items
+    )
