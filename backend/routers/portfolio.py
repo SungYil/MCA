@@ -197,10 +197,13 @@ class DividendItemResponse(BaseModel):
     frequency: str
     last_payment_date: str
     last_payment_amount: float
+    next_payment_date: str # NEW
+    next_payment_amount: float # NEW
 
 class DividendProjectionResponse(BaseModel):
     total_annual_income: float
     monthly_average: float
+    this_month_income: float # NEW: How much expected in current month
     items: List[DividendItemResponse]
 
 @router.get("/dividends", response_model=DividendProjectionResponse)
@@ -216,20 +219,21 @@ def get_dividend_projection(
     
     projection_items = []
     total_annual = 0.0
+    total_this_month = 0.0
     
+    from datetime import datetime, timedelta
+    today = datetime.now()
+
     for item in items:
         # Fetch dividend history
-        # Optimization: In real app, cache this heavily.
         div_info = stock_service.get_dividend_history(item.ticker)
         
         # Calculate Income
-        # Method 1: Yield * Current Value (Market approach)
-        # Method 2: Annualized Last Div * Shares (Cashflow approach) -> More accurate for investor
-        
-        # Let's use Method 2 if history exists, else Method 1 fallback
         annual_income_per_share = 0.0
-        last_date = "-"
+        last_date_str = "-"
         last_amount = 0.0
+        next_date_str = "-"
+        next_amount_expected = 0.0
         
         history = div_info.get("history", [])
         frequency = div_info.get("frequency", "Irregular")
@@ -237,26 +241,68 @@ def get_dividend_projection(
         if history and len(history) > 0:
             last_div = history[0] # Most recent
             last_amount = last_div.get("amount", 0.0)
-            last_date = last_div.get("date", "-")[:10]
+            last_date_str = last_div.get("date", "-")[:10]
             
-            # Annualize based on frequency
+            # Annualize logic
             multiplier = 0
             if frequency == "Monthly": multiplier = 12
             elif frequency == "Quarterly": multiplier = 4
             elif frequency == "Annual": multiplier = 1
-            elif frequency == "Irregular": 
-                # Sum last 365 days
-                from datetime import datetime, timedelta
-                cutoff = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+            
+            # Fallback for irregular using TTM sum if multiplier is 0
+            if multiplier == 0 and frequency == "Irregular": 
+                cutoff = (today - timedelta(days=365)).strftime('%Y-%m-%d')
                 annual_income_per_share = sum(d['amount'] for d in history if d.get('date') >= cutoff)
-            
-            if multiplier > 0:
+            elif multiplier > 0:
                 annual_income_per_share = last_amount * multiplier
-        else:
-            # Fallback to Yield if no history but yield exists (e.g. from profile?)
-            # Currently our get_dividend_history calculates yield from history, so if history is empty, yield is 0.
-            pass
-            
+
+            # NEXT PAYMENT DATE CALCULATION
+            try:
+                if last_date_str != "-" and frequency in ["Monthly", "Quarterly", "Annual"]:
+                    last_dt = datetime.strptime(last_date_str, "%Y-%m-%d")
+                    
+                    # Simple approximate add
+                    next_dt = last_dt
+                    
+                    # Find the first future date
+                    while next_dt < today:
+                        if frequency == "Monthly":
+                            # Add ~30 days or using simple month increment logic
+                            # Being robust without extra libs:
+                            year = next_dt.year + (next_dt.month // 12)
+                            month = (next_dt.month % 12) + 1
+                            # Handle day overflow (e.g. Jan 31 -> Feb 28)
+                            try:
+                                next_dt = next_dt.replace(year=year, month=month)
+                            except ValueError:
+                                # Fallback for end of month issues
+                                next_dt = next_dt.replace(year=year, month=month, day=28)
+                                
+                        elif frequency == "Quarterly":
+                             # Add 3 months
+                             month = next_dt.month + 3
+                             year = next_dt.year + (month - 1) // 12
+                             month = (month - 1) % 12 + 1
+                             try:
+                                next_dt = next_dt.replace(year=year, month=month)
+                             except ValueError:
+                                next_dt = next_dt.replace(year=year, month=month, day=28)
+                                
+                        elif frequency == "Annual":
+                             next_dt = next_dt.replace(year=next_dt.year + 1)
+                             
+                    next_date_str = next_dt.strftime('%Y-%m-%d')
+                    next_amount_expected = last_amount * item.shares
+                    
+                    # Check if this expected payment is in the CURRENT month
+                    if next_dt.month == today.month and next_dt.year == today.year:
+                        total_this_month += next_amount_expected
+                        
+            except Exception as e:
+                # Fallback if date parsing fails
+                print(f"Date calc error for {item.ticker}: {e}")
+                pass
+
         estimated_income = annual_income_per_share * item.shares
         total_annual += estimated_income
         
@@ -266,12 +312,15 @@ def get_dividend_projection(
             div_yield=div_info.get("div_yield", 0.0),
             annual_income=round(estimated_income, 2),
             frequency=frequency,
-            last_payment_date=last_date,
-            last_payment_amount=last_amount
+            last_payment_date=last_date_str,
+            last_payment_amount=last_amount,
+            next_payment_date=next_date_str,
+            next_payment_amount=round(next_amount_expected, 2)
         ))
         
     return DividendProjectionResponse(
         total_annual_income=round(total_annual, 2),
         monthly_average=round(total_annual / 12, 2),
+        this_month_income=round(total_this_month, 2),
         items=projection_items
     )
