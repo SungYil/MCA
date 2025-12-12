@@ -119,3 +119,54 @@ async def get_market_analysis(db: Session = Depends(get_db)):
         db.commit()
         
         return {"analysis": report_content}
+
+@router.get("/dashboard")
+def get_dashboard_summary():
+    """
+    Returns aggregated data for the Home Dashboard:
+    1. USDKRW Exchange Rate
+    2. Market Map Data (Top Tech stocks performance)
+    3. Market Status (implied by data availability/time, handled by frontend)
+    """
+    # 1. Exchange Rate
+    rate = stock_service.get_exchange_rate("usd", "krw")
+
+    # 2. Market Map Data
+    # Hardcoded list of market movers for the visual map
+    map_tickers = [
+        "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", 
+        "AVGO", "COST", "PEP", "KO", "JPM", "AMD", "NFLX"
+    ]
+    
+    # Batch fetch
+    batch_data = stock_service.get_batch_stock_prices(map_tickers)
+    
+    # Enrichment (for TreeMap sizing, usually requires Market Cap)
+    # Since we can't fetch 15 market caps efficiently every time without caching,
+    # we will use a static 'weight' map for MVP or just 1.0 if unknown.
+    # Approximate relative sizing (Mental Model 2024-2025)
+    # AAPL/MSFT/NVDA ~ 3.5T, GOOGL/AMZN ~ 2T, META ~ 1.5T, TSLA ~ 1T...
+    # We can hardcode weights for the visual impact requested by user ("Finviz style")
+    
+    weights = {
+        "AAPL": 3500, "MSFT": 3400, "NVDA": 3300, "GOOGL": 2100, "AMZN": 2200, 
+        "META": 1500, "TSLA": 900, "AVGO": 800, "JPM": 600, "COST": 400,
+        "AMD": 300, "NFLX": 300, "PEP": 230, "KO": 280
+    }
+
+    heatmap_data = []
+    for item in batch_data:
+        t = item["ticker"]
+        heatmap_data.append({
+            "ticker": t,
+            "change_percent": item["change_percent"],
+            "price": item["price"],
+            "weight": weights.get(t, 100) # Default weight
+        })
+
+    # Sort checks? Frontend TreeMap might handle it.
+    
+    return {
+        "exchange_rate": rate,
+        "heatmap": heatmap_data
+    }

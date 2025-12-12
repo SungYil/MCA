@@ -354,6 +354,82 @@ class StockService:
             logger.error(f"Error searching tickers for {query}: {e}")
             return []
 
+    def get_batch_stock_prices(self, tickers: List[str]) -> List[Dict[str, Any]]:
+        """
+        Fetch real-time prices for multiple tickers using Tiingo IEX endpoint.
+        """
+        if not self.api_key or not tickers:
+            return []
+
+        ticker_str = ",".join([t.upper() for t in tickers])
+        try:
+            url = f"{self.base_url}/iex/?tickers={ticker_str}"
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Token {self.api_key}'
+            }
+            response = requests.get(url, headers=headers, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Tiingo returns list of quotes
+            results = []
+            for quote in data:
+                price = quote.get("tngoLast") or quote.get("last")
+                prev_close = quote.get("prevClose")
+                change_percent = 0.0
+                if price and prev_close:
+                    change_percent = ((price - prev_close) / prev_close) * 100
+                
+                results.append({
+                    "ticker": quote.get("ticker"),
+                    "price": price,
+                    "change_percent": change_percent,
+                    # Market Cap isn't in IEX quote, usually need separate Profile fetch.
+                    # For MVP Map, we might need to hardcode 'relative size' or fetch profile separately.
+                    # Optimization: Just return price/change here, handling sizing in frontend or separate cache.
+                })
+            return results
+
+        except Exception as e:
+            logger.error(f"Error fetching batch prices: {e}")
+            return []
+
+    def get_exchange_rate(self, from_currency: str = "usd", to_currency: str = "krw") -> float:
+        """
+        Fetch Forex rate.
+        For Tiingo, ticker format is often 'usdkrw' for generic endpoints.
+        """
+        ticker = f"{from_currency}{to_currency}".lower()
+        # Fallback hardcode for MVP if Tiingo fails (Tiingo Forex might be separate permission)
+        # 2024-12 estimate: 1400 KRW/USD (approx)
+        fallback_rate = 1430.0 
+        
+        if not self.api_key:
+            return fallback_rate
+
+        try:
+            # Tiingo Top-of-Book for Forex? Or Daily.
+            # /tiingo/fx/top returns top of book.
+            # /tiingo/daily/<ticker>/prices works for some forex.
+            # Let's try Tiingo IEX (no), Tiingo FX endpoint.
+            # Note: Startup/Free plan might not cover FX. 
+            # Safe Fallback is essential.
+            
+            # Try generic daily endpoint for 'usdkrw'
+            url = f"{self.base_url}/tiingo/daily/{ticker}/prices"
+            headers = {'Authorization': f'Token {self.api_key}'}
+            response = requests.get(url, headers=headers, timeout=3)
+            if response.status_code == 200:
+                data = response.json()
+                if data and isinstance(data, list):
+                    return data[-1].get("close", fallback_rate)
+            
+            return fallback_rate
+        except Exception as e:
+            logger.error(f"Error fetching forex {ticker}: {e}")
+            return fallback_rate
+
     def get_market_brief_data(self) -> Dict[str, Any]:
         """
         Fetch data for market briefing:
