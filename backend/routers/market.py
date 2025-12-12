@@ -94,11 +94,10 @@ async def get_market_analysis(db: Session = Depends(get_db)):
     if should_generate:
         # 1. Gather raw data
         try:
-            data = stock_service.stock_service.get_market_brief_data()
-        except:
-             # Fallback fix if stock_service instance structure changed (as seen in previous error)
-             from services import stock_service as ss
-             data = ss.stock_service.get_market_brief_data()
+            data = stock_service.get_market_brief_data()
+        except Exception as e:
+             print(f"Error fetching market data: {e}")
+             data = {"indices": {}, "news": []}
 
         # 2. Generate Report
         report_content = await ai_service.ai_service.generate_market_briefing(data)
