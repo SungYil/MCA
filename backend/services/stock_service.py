@@ -279,6 +279,22 @@ class StockService:
     def _get_mock_price(self, ticker):
         return {"price": 123.45, "change": 1.23, "change_percent": 1.0}
 
+    def _get_mock_dividends(self, ticker):
+        """
+        Return mock dividend data when API fails or is rate limited.
+        """
+        return {
+            "div_yield": 1.5,
+            "frequency": "Quarterly",
+            "growth_rate_5y": 5.0,
+            "history": [
+                {"date": "2023-12-01", "amount": 0.24},
+                {"date": "2023-09-01", "amount": 0.24},
+                {"date": "2023-06-01", "amount": 0.23},
+                {"date": "2023-03-01", "amount": 0.23}
+            ]
+        }
+
     def get_stock_news(self, ticker: str, limit: int = 5) -> List[Dict[str, Any]]:
         """
         Fetch recent news articles for a ticker.
