@@ -22,11 +22,14 @@ interface DividendItem {
     frequency: string;
     last_payment_date: string;
     last_payment_amount: number;
+    next_payment_date: string; // NEW
+    next_payment_amount: number; // NEW
 }
 
 interface DividendProjection {
     total_annual_income: number;
     monthly_average: number;
+    this_month_income: number; // NEW
     items: DividendItem[];
 }
 
@@ -78,7 +81,7 @@ export default function PortfolioPage() {
             const res = await fetch(`${getApiUrl()}/api/portfolio`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!res.ok) throw new Error('Failed to fetch portfolio');
+            if (!res.ok) throw new Error('포트폴리오 불러오기 실패');
             const data = await res.json();
             setItems(data);
         } catch (err: any) {
@@ -109,7 +112,7 @@ export default function PortfolioPage() {
     const handleAnalyze = async () => {
         setAnalyzing(true);
         setAnalysis(null);
-        setActiveTab('analysis'); // Force switch to analysis tab
+        setActiveTab('analysis');
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`${getApiUrl()}/api/portfolio/analyze`, {
@@ -117,7 +120,7 @@ export default function PortfolioPage() {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
-            if (!res.ok) throw new Error('Analysis failed');
+            if (!res.ok) throw new Error('분석 실패');
             const data = await res.json();
             setAnalysis(data.analysis);
         } catch (err: any) {
@@ -144,10 +147,9 @@ export default function PortfolioPage() {
                 })
             });
 
-            if (!res.ok) throw new Error('Failed to add item');
+            if (!res.ok) throw new Error('추가 실패');
 
             fetchPortfolio();
-            // Invalidate dividend data so it refetches next time
             setDividendData(null);
             setTicker('');
             setShares('');
@@ -158,14 +160,14 @@ export default function PortfolioPage() {
     };
 
     const handleDelete = async (ticker: string) => {
-        if (!confirm('Are you sure you want to remove this stock?')) return;
+        if (!confirm('정말 삭제하시겠습니까?')) return;
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`${getApiUrl()}/api/portfolio/${ticker}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!res.ok) throw new Error('Failed to delete item');
+            if (!res.ok) throw new Error('삭제 실패');
             fetchPortfolio();
             setDividendData(null);
         } catch (err: any) {
@@ -179,13 +181,13 @@ export default function PortfolioPage() {
     const totalGain = totalValue - totalCost;
     const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
 
-    if (loading) return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading...</div>;
+    if (loading) return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">로딩 중...</div>;
 
     return (
         <main className="min-h-screen bg-gray-900 text-white p-6 md:p-12">
             <div className="max-w-6xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                    My Portfolio
+                    내 포트폴리오
                 </h1>
 
                 {/* TAB NAVIGATION */}
@@ -196,7 +198,7 @@ export default function PortfolioPage() {
                             ? 'border-b-2 border-blue-500 text-blue-400'
                             : 'text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-t'}`}
                     >
-                        📊 Holdings
+                        📊 보유 주식
                     </button>
                     <button
                         onClick={() => setActiveTab('analysis')}
@@ -204,7 +206,7 @@ export default function PortfolioPage() {
                             ? 'border-b-2 border-purple-500 text-purple-400'
                             : 'text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-t'}`}
                     >
-                        🤖 AI Analysis
+                        🤖 AI 분석
                     </button>
                     <button
                         onClick={() => setActiveTab('dividends')}
@@ -212,7 +214,7 @@ export default function PortfolioPage() {
                             ? 'border-b-2 border-emerald-500 text-emerald-400'
                             : 'text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-t'}`}
                     >
-                        💰 Dividends
+                        💰 배당금
                     </button>
                 </div>
 
@@ -224,15 +226,15 @@ export default function PortfolioPage() {
                         {/* Summary Card */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                             <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
-                                <p className="text-gray-400 text-sm mb-1">Total Value</p>
+                                <p className="text-gray-400 text-sm mb-1">총 평가액</p>
                                 <p className="text-3xl font-mono font-bold text-white">${totalValue.toFixed(2)}</p>
                             </div>
                             <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
-                                <p className="text-gray-400 text-sm mb-1">Total Cost</p>
+                                <p className="text-gray-400 text-sm mb-1">총 매입금액</p>
                                 <p className="text-3xl font-mono font-bold text-gray-300">${totalCost.toFixed(2)}</p>
                             </div>
                             <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
-                                <p className="text-gray-400 text-sm mb-1">Total Gain/Loss</p>
+                                <p className="text-gray-400 text-sm mb-1">총 손익</p>
                                 <p className={`text-3xl font-mono font-bold ${totalGain >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                     {totalGain >= 0 ? '+' : ''}{totalGain.toFixed(2)} ({totalGainPercent.toFixed(2)}%)
                                 </p>
@@ -241,25 +243,25 @@ export default function PortfolioPage() {
 
                         {/* Add Form */}
                         <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 mb-8 backdrop-blur-sm">
-                            <h2 className="text-lg font-semibold mb-4 text-gray-300">Add Transaction (Manual)</h2>
+                            <h2 className="text-lg font-semibold mb-4 text-gray-300">주식 추가 (수동)</h2>
                             <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-4">
                                 <input
-                                    type="text" placeholder="Ticker (e.g. AAPL)"
+                                    type="text" placeholder="티커 (예: AAPL)"
                                     className="bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none flex-1 transition-colors"
                                     value={ticker} onChange={(e) => setTicker(e.target.value)} required
                                 />
                                 <input
-                                    type="number" placeholder="Shares" step="0.0001"
+                                    type="number" placeholder="보유 수량" step="0.0001"
                                     className="bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none flex-1 transition-colors"
                                     value={shares} onChange={(e) => setShares(e.target.value)} required
                                 />
                                 <input
-                                    type="number" placeholder="Avg Cost ($)" step="0.01"
+                                    type="number" placeholder="평단가 ($)" step="0.01"
                                     className="bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none flex-1 transition-colors"
                                     value={avgCost} onChange={(e) => setAvgCost(e.target.value)} required
                                 />
                                 <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition-all hover:scale-105 shadow-lg">
-                                    Add Position
+                                    추가하기
                                 </button>
                             </form>
                         </div>
@@ -270,13 +272,13 @@ export default function PortfolioPage() {
                                 <table className="w-full text-left text-gray-400">
                                     <thead className="bg-gray-900 text-gray-200 uppercase text-xs tracking-wider">
                                         <tr>
-                                            <th className="px-6 py-4">Ticker</th>
-                                            <th className="px-6 py-4">Shares</th>
-                                            <th className="px-6 py-4">Avg Cost</th>
-                                            <th className="px-6 py-4">Price</th>
-                                            <th className="px-6 py-4">Value</th>
-                                            <th className="px-6 py-4">Gain/Loss</th>
-                                            <th className="px-6 py-4">Action</th>
+                                            <th className="px-6 py-4">티커</th>
+                                            <th className="px-6 py-4">수량</th>
+                                            <th className="px-6 py-4">평단가</th>
+                                            <th className="px-6 py-4">현재가</th>
+                                            <th className="px-6 py-4">평가금액</th>
+                                            <th className="px-6 py-4">손익</th>
+                                            <th className="px-6 py-4">관리</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-700">
@@ -294,7 +296,7 @@ export default function PortfolioPage() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <button onClick={() => handleDelete(item.ticker)} className="text-red-500 hover:text-red-300 hover:bg-red-900/20 px-3 py-1 rounded transition-colors text-sm">
-                                                        Remove
+                                                        삭제
                                                     </button>
                                                 </td>
                                             </tr>
@@ -302,7 +304,7 @@ export default function PortfolioPage() {
                                         {items.length === 0 && (
                                             <tr>
                                                 <td colSpan={7} className="px-6 py-12 text-center text-gray-500 italic">
-                                                    No holdings yet. Add your first stock above!
+                                                    보유 중인 주식이 없습니다. 주식을 추가해보세요!
                                                 </td>
                                             </tr>
                                         )}
@@ -318,8 +320,8 @@ export default function PortfolioPage() {
                     <div className="animate-fade-in space-y-6">
                         <div className="flex justify-between items-center bg-gray-800 p-6 rounded-xl border border-gray-700">
                             <div>
-                                <h2 className="text-xl font-bold text-white">Portfolio Health Check</h2>
-                                <p className="text-gray-400 text-sm">Powered by Gemini AI with Real-time Data</p>
+                                <h2 className="text-xl font-bold text-white">포트폴리오 정밀 진단</h2>
+                                <p className="text-gray-400 text-sm">Gemini AI가 실시간 데이터를 기반으로 분석합니다.</p>
                             </div>
                             <button
                                 onClick={handleAnalyze}
@@ -331,11 +333,11 @@ export default function PortfolioPage() {
                             >
                                 {analyzing ? (
                                     <>
-                                        <span className="animate-spin">🔄</span> Analyzing...
+                                        <span className="animate-spin">🔄</span> 분석 중...
                                     </>
                                 ) : (
                                     <>
-                                        <span>✨</span> Generate Report
+                                        <span>✨</span> AI 보고서 생성
                                     </>
                                 )}
                             </button>
@@ -352,7 +354,7 @@ export default function PortfolioPage() {
 
                         {!analysis && !analyzing && (
                             <div className="text-center py-20 bg-gray-800/30 rounded-xl border border-gray-700/50 border-dashed">
-                                <p className="text-gray-500 text-lg">Click the button above to receive a comprehensive strategy report.</p>
+                                <p className="text-gray-500 text-lg">위 버튼을 눌러 상세한 전략 보고서를 받아보세요.</p>
                             </div>
                         )}
                     </div>
@@ -361,26 +363,37 @@ export default function PortfolioPage() {
                 {/* 3. DIVIDENDS TAB */}
                 {activeTab === 'dividends' && (
                     <div className="animate-fade-in space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {/* Annual Income Card */}
                             <div className="bg-gradient-to-br from-emerald-900/50 to-gray-800 p-8 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <p className="text-emerald-200 mb-2 font-medium">Estimated Annual Income</p>
+                                    <p className="text-emerald-200 mb-2 font-medium">예상 연 배당금</p>
                                     <h3 className="text-4xl font-bold text-white tracking-tight">
                                         ${dividendData?.total_annual_income.toFixed(2) || '0.00'}
                                     </h3>
-                                    <p className="text-sm text-emerald-400 mt-2">Based on TTM Yield & Frequency</p>
+                                    <p className="text-sm text-emerald-400 mt-2">최근 1년 배당 히스토리 기준</p>
                                 </div>
                                 <div className="absolute -right-4 -bottom-4 bg-emerald-500/20 blur-3xl w-48 h-48 rounded-full"></div>
                             </div>
 
+                            {/* This Month Estimate Card */}
+                            <div className="bg-gradient-to-br from-blue-900/30 to-gray-800 p-8 rounded-xl border border-blue-500/30 shadow-lg relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <p className="text-blue-200 mb-2 font-medium">이번 달(12월) 예상 수령액</p>
+                                    <h3 className="text-4xl font-bold text-white tracking-tight">
+                                        ${dividendData?.this_month_income.toFixed(2) || '0.00'}
+                                    </h3>
+                                    <p className="text-sm text-blue-400 mt-2">지급 예정일 기준</p>
+                                </div>
+                            </div>
+
                             {/* Monthly Avg Card */}
                             <div className="bg-gray-800 p-8 rounded-xl border border-gray-700 shadow-lg flex flex-col justify-center">
-                                <p className="text-gray-400 mb-2 font-medium">Monthly Average (Est.)</p>
+                                <p className="text-gray-400 mb-2 font-medium">월 평균 수령액 (추정)</p>
                                 <h3 className="text-4xl font-bold text-white">
                                     ${dividendData?.monthly_average.toFixed(2) || '0.00'}
                                 </h3>
-                                <p className="text-sm text-gray-500 mt-2">Before Tax</p>
+                                <p className="text-sm text-gray-500 mt-2">세전 기준</p>
                             </div>
                         </div>
 
@@ -388,25 +401,26 @@ export default function PortfolioPage() {
                         <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-xl">
                             <div className="p-6 border-b border-gray-700 bg-gray-800/80 backdrop-blur">
                                 <h2 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
-                                    <span>💰</span> Income Breakdown
+                                    <span>💰</span> 배당 상세 내역
                                 </h2>
                             </div>
 
                             {loadingDiv ? (
                                 <div className="p-12 text-center text-gray-400">
-                                    <span className="animate-pulse">Loading dividend data...</span>
+                                    <span className="animate-pulse">배당 데이터를 분석하고 있습니다...</span>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left">
                                         <thead className="bg-gray-900/50 text-gray-400 uppercase text-xs">
                                             <tr>
-                                                <th className="px-6 py-4">Ticker</th>
-                                                <th className="px-6 py-4">Share Frequency</th>
-                                                <th className="px-6 py-4">Yield</th>
-                                                <th className="px-6 py-4">Latest Payout</th>
-                                                <th className="px-6 py-4">Last Payment Date</th>
-                                                <th className="px-6 py-4 text-emerald-400">Est. Income (Yr)</th>
+                                                <th className="px-6 py-4">티커</th>
+                                                <th className="px-6 py-4">지급 주기</th>
+                                                <th className="px-6 py-4">배당률</th>
+                                                <th className="px-6 py-4">최근 지급액</th>
+                                                <th className="px-6 py-4">최근 지급일</th>
+                                                <th className="px-6 py-4 text-blue-400">다음 배당일 (예상)</th>
+                                                <th className="px-6 py-4 text-emerald-400">예상 연 배당금</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-700/50">
@@ -421,6 +435,10 @@ export default function PortfolioPage() {
                                                         {item.last_payment_amount > 0 ? `$${item.last_payment_amount}` : '-'}
                                                     </td>
                                                     <td className="px-6 py-4 text-gray-400 text-sm">{item.last_payment_date}</td>
+                                                    <td className="px-6 py-4 text-blue-300 text-sm font-bold">
+                                                        {item.next_payment_date}
+                                                        {item.next_payment_amount > 0 && <span className="block text-xs font-normal text-gray-500">($ {item.next_payment_amount})</span>}
+                                                    </td>
                                                     <td className="px-6 py-4 font-mono font-bold text-emerald-300 bg-emerald-900/10">
                                                         ${item.annual_income.toFixed(2)}
                                                     </td>
@@ -428,8 +446,8 @@ export default function PortfolioPage() {
                                             ))}
                                             {(!dividendData?.items || dividendData?.items.length === 0) && (
                                                 <tr>
-                                                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                                                        No dividend estimates available. Add dividend stocks (like O, KO) to see data.
+                                                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                                                        배당 데이터가 없습니다. 배당주(예: O, KO, AAPL)를 추가해보세요.
                                                     </td>
                                                 </tr>
                                             )}
