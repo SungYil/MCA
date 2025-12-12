@@ -1,43 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import LiveClock from '../components/LiveClock';
+import MarketMap from '../components/MarketMap';
 
 export default function Home() {
-  const [status, setStatus] = useState<string>('Loading...');
-  const [error, setError] = useState<boolean>(false);
-  const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Strict Auth Check
+    // Auth Check
     const token = localStorage.getItem('token');
     if (!token) {
-      window.location.href = '/login'; // Force redirect using window.location to avoid flash
+      window.location.href = '/login';
       return;
     }
 
-    // Dynamically determine API URL based on current hostname
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    const API_URL = `${protocol}//${hostname}:8000`;
-
-    fetch(`${API_URL}/api/health`)
-      .then((res) => res.json())
-      .then((data) => {
-        setStatus(data.message);
-        setError(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setStatus('Error connecting to backend');
-        setError(true);
-      });
-
-    // Fetch Watchlist
-    fetch(`${API_URL}/api/watchlist`)
-      .then((res) => {
-        if (res.ok) return res.json();
-        throw new Error('Failed to fetch watchlist');
-      })
     // Fetch Dashboard Data
     const fetchData = async () => {
       try {
