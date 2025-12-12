@@ -317,7 +317,40 @@ class StockService:
         return [
             {"title": f"{ticker} Stock Analysis (Mock)", "description": "Mock description for development.", "source": "MockNews", "publishedDate": "2024-01-01"},
             {"title": f"Why {ticker} is moving today", "description": "Another mock article.", "source": "MockInsider", "publishedDate": "2024-01-02"}
-        ]
+    def search_ticker(self, query: str) -> List[Dict[str, Any]]:
+        """
+        Search for tickers matching the query.
+        Prioritize filtering the local cache (e.g., from SEC map) if available, 
+        or fallback to Tiingo Search API.
+        Current implementation: Use Tiingo Search API for best results (includes name matching).
+        """
+        if not self.api_key:
+             return [
+                 {"ticker": "AAPL", "name": "Apple Inc."},
+                 {"ticker": "MSFT", "name": "Microsoft Corporation"},
+                 {"ticker": "GOOGL", "name": "Alphabet Inc."},
+                 {"ticker": "AMZN", "name": "Amazon.com Inc."},
+                 {"ticker": "TSLA", "name": "Tesla Inc."}
+             ]
+
+        try:
+            url = f"{self.base_url}/tiingo/utilities/search?query={query}"
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Token {self.api_key}'
+            }
+            response = requests.get(url, headers=headers, timeout=5)
+            response.raise_for_status()
+            results = response.json()
+            
+            # Tiingo returns list of objects
+            # Filter to just US Stocks for MVP relevance if needed, but Tiingo search is good.
+            # Format: [{"ticker": "AAPL", "name": "Apple Inc", ...}]
+            return results[:10] # Top 10
+
+        except Exception as e:
+            logger.error(f"Error searching tickers for {query}: {e}")
+            return []
 
 # Singleton instance
 stock_service = StockService()

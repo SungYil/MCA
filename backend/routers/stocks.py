@@ -9,6 +9,10 @@ router = APIRouter(
     tags=["stocks"],
 )
 
+@router.get("/search")
+async def search_stocks(query: str):
+    return stock_service.search_ticker(query)
+
 @router.post("/{ticker}/analyze")
 async def analyze_stock(ticker: str):
     """

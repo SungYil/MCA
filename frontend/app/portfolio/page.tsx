@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import TickerSearch from '@/components/TickerSearch';
 
 interface PortfolioItem {
     id: number;
@@ -22,14 +23,14 @@ interface DividendItem {
     frequency: string;
     last_payment_date: string;
     last_payment_amount: number;
-    next_payment_date: string; // NEW
-    next_payment_amount: number; // NEW
+    next_payment_date: string;
+    next_payment_amount: number;
 }
 
 interface DividendProjection {
     total_annual_income: number;
     monthly_average: number;
-    this_month_income: number; // NEW
+    this_month_income: number;
     items: DividendItem[];
 }
 
@@ -75,12 +76,23 @@ export default function PortfolioPage() {
         return process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
     };
 
+    const handleAuthError = () => {
+        localStorage.removeItem('token');
+        router.push('/login');
+    };
+
     const fetchPortfolio = async () => {
         const token = localStorage.getItem('token');
         try {
             const res = await fetch(`${getApiUrl()}/api/portfolio`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            if (res.status === 401) {
+                handleAuthError();
+                return;
+            }
+
             if (!res.ok) throw new Error('포트폴리오 불러오기 실패');
             const data = await res.json();
             setItems(data);
@@ -98,6 +110,12 @@ export default function PortfolioPage() {
             const res = await fetch(`${getApiUrl()}/api/portfolio/dividends`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            if (res.status === 401) {
+                handleAuthError();
+                return;
+            }
+
             if (res.ok) {
                 const data = await res.json();
                 setDividendData(data);
@@ -119,6 +137,11 @@ export default function PortfolioPage() {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            if (res.status === 401) {
+                handleAuthError();
+                return;
+            }
 
             if (!res.ok) throw new Error('분석 실패');
             const data = await res.json();
@@ -147,13 +170,23 @@ export default function PortfolioPage() {
                 })
             });
 
+            if (res.status === 401) {
+                handleAuthError();
+                return;
+            }
+
             if (!res.ok) throw new Error('추가 실패');
 
             fetchPortfolio();
             setDividendData(null);
+            // TickerSearch component manages its own input state, 
+            // but we reset the parent ticker state.
             setTicker('');
             setShares('');
             setAvgCost('');
+
+            // Force reload of page or similar might be needed to clear TickerSearch input visually 
+            // if we don't expose a reset ref. For now, user just types new one.
         } catch (err: any) {
             alert(err.message);
         }
@@ -167,12 +200,23 @@ export default function PortfolioPage() {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            if (res.status === 401) {
+                handleAuthError();
+                return;
+            }
+
             if (!res.ok) throw new Error('삭제 실패');
             fetchPortfolio();
             setDividendData(null);
         } catch (err: any) {
             alert(err.message);
         }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        router.push('/login');
     };
 
     // Calculate totals
@@ -186,9 +230,25 @@ export default function PortfolioPage() {
     return (
         <main className="min-h-screen bg-gray-900 text-white p-6 md:p-12">
             <div className="max-w-6xl mx-auto">
-                <h1 className="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                    내 포트폴리오
-                </h1>
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 cursor-pointer" onClick={() => router.push('/')}>
+                        내 포트폴리오
+                    </h1>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => router.push('/')}
+                            className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg transition-colors border border-gray-700 font-medium"
+                        >
+                            🏠 홈으로
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="bg-red-900/50 hover:bg-red-900 text-red-200 px-4 py-2 rounded-lg transition-colors border border-red-900/50 font-medium"
+                        >
+                            로그아웃
+                        </button>
+                    </div>
+                </div>
 
                 {/* TAB NAVIGATION */}
                 <div className="flex space-x-2 mb-8 border-b border-gray-700">
@@ -244,23 +304,20 @@ export default function PortfolioPage() {
                         {/* Add Form */}
                         <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 mb-8 backdrop-blur-sm">
                             <h2 className="text-lg font-semibold mb-4 text-gray-300">주식 추가 (수동)</h2>
-                            <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-4">
-                                <input
-                                    type="text" placeholder="티커 (예: AAPL)"
-                                    className="bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none flex-1 transition-colors"
-                                    value={ticker} onChange={(e) => setTicker(e.target.value)} required
-                                />
+                            <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-4 items-start">
+                                <TickerSearch onSelect={(t) => setTicker(t)} />
+
                                 <input
                                     type="number" placeholder="보유 수량" step="0.0001"
-                                    className="bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none flex-1 transition-colors"
+                                    className="bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none flex-1 transition-colors w-full md:w-auto"
                                     value={shares} onChange={(e) => setShares(e.target.value)} required
                                 />
                                 <input
                                     type="number" placeholder="평단가 ($)" step="0.01"
-                                    className="bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none flex-1 transition-colors"
+                                    className="bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none flex-1 transition-colors w-full md:w-auto"
                                     value={avgCost} onChange={(e) => setAvgCost(e.target.value)} required
                                 />
-                                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition-all hover:scale-105 shadow-lg">
+                                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition-all hover:scale-105 shadow-lg w-full md:w-auto">
                                     추가하기
                                 </button>
                             </form>
