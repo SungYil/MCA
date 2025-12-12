@@ -49,24 +49,30 @@ class AIService:
     async def _retrieve_relevant_chunks(self, ticker: str) -> List[str]:
         """
         RAG Component: Retrieve top-k relevant text chunks.
-        TODO: Replace mock with actual Vector DB (pgvector) query.
+        NOW: Fetches REAL NEWS via Tiingo API.
         """
-        # Mock Context Data based on Ticker
-        # In production, this would use embeddings search.
-        mock_db = {
-            "AAPL": [
-                "Analyst Note (2024-Q1): Vision Pro headset launch had mixed reviews but high engagement.",
-                "Earnings Call: Services revenue reached an all-time high, offsetting iPhone weakness in China.",
-                "User Note: I am worried about the DOJ lawsuit regulatory risk."
-            ],
-            "O": [
-                "News: Realty Income completed the acquisition of Spirit Realty Capital.",
-                "Analyst Note: High interest rates continue to pressure REIT valuations, but O maintains 98% occupancy.",
-                "User Note: Love the monthly dividends, looking to add more if yield hits 6%."
-            ]
-        }
-        
-        return mock_db.get(ticker.upper(), ["No specific recent news or notes found for this stock."])
+        from services import stock_service # Implicit import to avoid circular dep if any, or better import at top if simple.
+        # Actually standard import is `from services.stock_service import stock_service`
+        # But let's assume it's available or import locally.
+        try:
+            from services.stock_service import stock_service
+            news_items = stock_service.get_stock_news(ticker, limit=5)
+            
+            if not news_items:
+                return ["No recent news found for this stock."]
+                
+            chunks = []
+            for item in news_items:
+                # Format: [Date] Source: Title - Description
+                date_str = item.get("publishedDate", "")[:10]
+                chunk = f"[{date_str}] {item['source']}: {item['title']} - {item['description']}"
+                chunks.append(chunk)
+            
+            return chunks
+
+        except Exception as e:
+            logger.error(f"RAG Retrieval failed for {ticker}: {e}")
+            return [f"Error retrieving news: {str(e)}"]
 
     def _build_prompt(self, ticker: str, data: Dict[str, Any], context: List[str], profile: Dict[str, Any]) -> str:
         """
@@ -148,13 +154,24 @@ Holdings:
 {holdings_text}
 
 [INSTRUCTIONS]
-Based on the portfolio above, provide a comprehensive analysis:
-1. **포트폴리오 건전성 진단**: 현재 구성이 안정적인지, 너무 한 섹터에 쏠려있지 않은지 평가.
-2. **오늘의 핵심 조언**: 현재 시장 상황(가정)에서 이 포트폴리오가 주의해야 할 점 1가지.
-3. **종목별 코멘트**: 주요 보유 종목(비중 큰 순서대로 2~3개)에 대한 짧은 진단 (홀드/매수/매도 관점).
-4. **리밸런싱 제안**: 더 추가하면 좋을 섹터나 종목 추천.
+Based on the portfolio above, provide a detailed and actionable report:
 
-Write in a warm, encouraging, but professional tone (Korean ~해요체).
+1.  **📊 포트폴리오 정밀 진단 (Weakness Analysis)**: 
+    -   섹터 편중, 배당 안정성, 성장성 부족 등 **취약점**을 날카롭게 지적해주세요.
+    -   "현재 기술주 비중이 80%로 너무 높습니다" 처럼 구체적으로.
+
+2.  **⚖️ 리밸런싱 제안 (Rebalancing)**:
+    -   현재 포트폴리오 균형을 맞추기 위해 **비중을 줄여야 할 종목**과 **늘려야 할 종목**을 콕 집어주세요.
+    -   예: "AAPL 비중을 10% 줄이고, 방어주인 O를 5% 추가하세요."
+
+3.  **💎 AI 추천 종목 (Stock Gems)**:
+    -   사용자의 투자 성향({user_profile.get('risk_tolerance')} / {user_profile.get('goal')})에 부합하는 **미국 주식 3개**를 추천해주세요.
+    -   각 추천 종목에 대해 **티커(Ticker)**와 **추천 이유**를 명시하세요.
+
+4.  **💡 오늘의 투자 조언**:
+    -   현재 시장 상황을 고려한 단기 대응 전략.
+
+Write in a warm but expert tone (Korean ~해요체/합니다체). Use Markdown formatting strictly.
 """
             # 3. Call LLM
             response_text = await self._call_gemini(prompt)

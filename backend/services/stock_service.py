@@ -184,13 +184,45 @@ class StockService:
     def _get_mock_price(self, ticker):
         return {"price": 123.45, "change": 1.23, "change_percent": 1.0}
 
-    def _get_mock_dividends(self, ticker):
-        return {
-            "div_yield": 1.5,
-            "frequency": "Quarterly",
-            "growth_rate_5y": 5.0,
-            "history": []
-        }
+    def get_stock_news(self, ticker: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Fetch recent news articles for a ticker.
+        """
+        ticker = ticker.upper()
+        if not self.api_key:
+            return self._get_mock_news(ticker)
+
+        try:
+            url = f"{self.base_url}/tiingo/news?tickers={ticker}&limit={limit}"
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Token {self.api_key}'
+            }
+            response = requests.get(url, headers=headers, timeout=5)
+            response.raise_for_status()
+            articles = response.json()
+            
+            news_items = []
+            for article in articles:
+                news_items.append({
+                    "title": article.get("title"),
+                    "publishedDate": article.get("publishedDate"),
+                    "description": article.get("description"),
+                    "url": article.get("url"),
+                    "source": article.get("source", {}).get("name", "Unknown")
+                })
+            
+            return news_items
+
+        except Exception as e:
+            logger.error(f"Error fetching news for {ticker}: {e}")
+            return self._get_mock_news(ticker)
+
+    def _get_mock_news(self, ticker):
+        return [
+            {"title": f"{ticker} Stock Analysis (Mock)", "description": "Mock description for development.", "source": "MockNews", "publishedDate": "2024-01-01"},
+            {"title": f"Why {ticker} is moving today", "description": "Another mock article.", "source": "MockInsider", "publishedDate": "2024-01-02"}
+        ]
 
 # Singleton instance
 stock_service = StockService()

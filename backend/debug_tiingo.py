@@ -44,6 +44,10 @@ test_endpoint("IEX Endpoint", iex_url)
 daily_url = f"{BASE_URL}/tiingo/daily/{TICKER}"
 test_endpoint("Daily Meta Endpoint", daily_url)
 
-# 3. Test Daily Prices (Last closing)
+# 3. Test Daily Prices
 history_url = f"{BASE_URL}/tiingo/daily/{TICKER}/prices?startDate=2024-01-01&columns=date,close,divCash"
 test_endpoint("Daily Prices Endpoint", history_url)
+
+# 4. Test News Endpoint
+news_url = f"{BASE_URL}/tiingo/news?tickers={TICKER}&limit=5"
+test_endpoint("News Endpoint", news_url)
