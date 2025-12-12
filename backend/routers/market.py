@@ -16,7 +16,7 @@ async def get_market_analysis():
     Get AI-generated daily market briefing.
     """
     # 1. Gather raw data
-    data = stock_service.stock_service.get_market_brief_data()
+    data = stock_service.get_market_brief_data()
     
     # 2. Generate Report
     report = await ai_service.ai_service.generate_market_briefing(data)
