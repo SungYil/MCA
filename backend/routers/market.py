@@ -86,7 +86,15 @@ async def get_market_analysis(db: Session = Depends(get_db)):
             # Morning report created yesterday is NOT valid.
             
             # Since we just want "freshness", let's check if it was created within the last 6 hours.
-            time_diff = (datetime.utcnow() - latest_report.created_at).total_seconds() / 3600
+            # Fix: Ensure both are timezone aware. DB returns aware (UTC usually).
+            now_utc = datetime.now(pytz.utc)
+            report_time = latest_report.created_at
+            
+            # If report_time is naive (shouldn't be with timezone=True), localize it.
+            if report_time.tzinfo is None:
+                report_time = pytz.utc.localize(report_time)
+                
+            time_diff = (now_utc - report_time).total_seconds() / 3600
             if time_diff < 10: # Reasonable window for a block
                 should_generate = False
                 return {"analysis": latest_report.content}
