@@ -141,31 +141,76 @@ class StockService:
 
     def get_dividend_history(self, ticker: str) -> Dict[str, Any]:
         """
-        Fetch dividend history. 
-        Tiingo doesn't have a direct "dividend history" endpoint easily accessible without full historical query.
-        We will query historical prices with 'resampleFreq=monthly' or similar to find distributions?
-        Or just stick to Mock for Dividends for now as Tiingo Free might be limited, 
-        or use Tiingo generic historical endpoint to find 'divCash' > 0.
+        Fetch dividend history using Tiingo Daily Prices (Historical).
+        Strategies:
+        1. Fetch last 2 years of daily prices.
+        2. Filter for rows where 'divCash' > 0.
+        3. Calculate Trailing 12M Yield.
         """
         ticker = ticker.upper()
-        # For MVP, Tiingo IEX doesn't give dividends. Daily historical does.
-        # Let's try to fetch last 1 year of daily data to find dividends.
         if not self.api_key:
             return self._get_mock_dividends(ticker)
 
         try:
-            url = f"{self.base_url}/tiingo/daily/{ticker}/prices?startDate=2024-01-01&columns=date,divCash"
+            # Fetch last 2 years (approx 730 days) to catch sufficient dividend history
+            from datetime import datetime, timedelta
+            start_date = (datetime.now() - timedelta(days=730)).strftime('%Y-%m-%d')
+            
+            url = f"{self.base_url}/tiingo/daily/{ticker}/prices?startDate={start_date}&columns=date,divCash,close"
             headers = {
                 'Content-Type': 'application/json',
                 'Authorization': f'Token {self.api_key}'
             }
-            # This fetches history. 
-            # Optimization: Fetching history for every request is heavy. 
-            # In a real app we'd cache this. For now, let's keep it simple or fallback to mock if too slow.
-            # Actually, let's stick to mock dividends for this step to ensure speed, 
-            # OR implement a very simple check.
-            # User prioritized Price and Chart.
-            return self._get_mock_dividends(ticker) # Keeping mock for dividends to focus on Price reliability first.
+            response = requests.get(url, headers=headers, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            
+            dividends = []
+            if isinstance(data, list):
+                for row in data:
+                    if row.get('divCash', 0) > 0:
+                        dividends.append({
+                            "date": row.get('date'),
+                            "amount": row.get('divCash')
+                        })
+            
+            # Sort descending by date
+            dividends.sort(key=lambda x: x['date'], reverse=True)
+            
+            # Calculate Yield (Sum of last 12 months / Current Price)
+            # We assume current price is the last close in this dataset
+            current_price = 0.0
+            if data and isinstance(data, list) and len(data) > 0:
+                 current_price = data[-1].get('close', 0.0)
+            
+            ttm_div_sum = 0.0
+            cutoff_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+            
+            for d in dividends:
+                if d['date'] >= cutoff_date:
+                    ttm_div_sum += d['amount']
+            
+            div_yield = 0.0
+            if current_price > 0:
+                div_yield = (ttm_div_sum / current_price) * 100
+                
+            # Determine Frequency (Naive estimation based on count in last year)
+            # 4 -> Quarterly, 12 -> Monthly, 1/2 -> Annual/Semi
+            count_last_year = len([d for d in dividends if d['date'] >= cutoff_date])
+            frequency = "Irregular"
+            if count_last_year >= 11: frequency = "Monthly"
+            elif count_last_year >= 3: frequency = "Quarterly"
+            elif count_last_year >= 1: frequency = "Annual"
+
+            # Growth Rate (Naive 1-year comparison if possible) - Skipped for robustness now
+            # growth_rate_5y can be left as 0 or calc simple 1y growth
+            
+            return {
+                "div_yield": round(div_yield, 2),
+                "frequency": frequency,
+                "growth_rate_5y": 0.0, # Requires deeper history/calc
+                "history": dividends[:10] # Return top 10 recent
+            }
 
         except Exception as e:
             logger.error(f"Error fetching dividends for {ticker}: {e}")
