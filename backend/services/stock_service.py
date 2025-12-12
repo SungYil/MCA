@@ -317,6 +317,8 @@ class StockService:
         return [
             {"title": f"{ticker} Stock Analysis (Mock)", "description": "Mock description for development.", "source": "MockNews", "publishedDate": "2024-01-01"},
             {"title": f"Why {ticker} is moving today", "description": "Another mock article.", "source": "MockInsider", "publishedDate": "2024-01-02"}
+        ]
+
     def search_ticker(self, query: str) -> List[Dict[str, Any]]:
         """
         Search for tickers matching the query.
