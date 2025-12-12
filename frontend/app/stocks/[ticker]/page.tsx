@@ -18,10 +18,7 @@ export default function StockDetailPage() {
 
     const handleGenerateReport = async () => {
         setIsAnalyzing(true);
-        // Dynamically determine API URL based on current hostname
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
         try {
             const res = await fetch(`${API_URL}/api/stocks/${ticker}/analyze`, {
@@ -39,9 +36,7 @@ export default function StockDetailPage() {
     };
 
     const toggleWatchlist = async () => {
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
         try {
             if (isInWatchlist) {
@@ -62,9 +57,7 @@ export default function StockDetailPage() {
     };
 
     const checkWatchlistStatus = async () => {
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
         try {
             const res = await fetch(`${API_URL}/api/watchlist`);
@@ -83,10 +76,7 @@ export default function StockDetailPage() {
     useEffect(() => {
         if (!ticker) return;
 
-        // Dynamically determine API URL based on current hostname
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
         // Fetch Stock Data
         fetch(`${API_URL}/api/stocks/${ticker}/full`)
@@ -114,9 +104,7 @@ export default function StockDetailPage() {
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
         try {
             const res = await fetch(`${API_URL}/api/portfolio`, {

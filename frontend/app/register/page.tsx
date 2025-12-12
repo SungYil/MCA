@@ -14,9 +14,7 @@ export default function RegisterPage() {
         e.preventDefault();
         setError(null);
 
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
         try {
             const res = await fetch(`${API_URL}/api/register`, {

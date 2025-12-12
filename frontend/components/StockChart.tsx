@@ -50,10 +50,7 @@ export default function StockChart({ ticker, averageCost }: StockChartProps) {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Determine API URL
-                const protocol = window.location.protocol;
-                const hostname = window.location.hostname;
-                const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
                 // Fetch 1 Year by default
                 const res = await fetch(`${API_URL}/api/stocks/${ticker}/history`);
@@ -91,8 +88,8 @@ export default function StockChart({ ticker, averageCost }: StockChartProps) {
                         key={r}
                         onClick={() => setRange(r)}
                         className={`text-xs font-bold px-3 py-1 rounded transition-colors ${range === r
-                                ? 'bg-gray-700 text-white border border-gray-600'
-                                : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800'
+                            ? 'bg-gray-700 text-white border border-gray-600'
+                            : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800'
                             }`}
                     >
                         {r}

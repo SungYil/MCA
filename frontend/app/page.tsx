@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import LiveClock from '../components/LiveClock';
 import MarketMap from '../components/MarketMap';
 
 export default function Home() {
+  const router = useRouter();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -13,16 +15,14 @@ export default function Home() {
     // Auth Check
     const token = localStorage.getItem('token');
     if (!token) {
-      window.location.href = '/login';
+      router.push('/login'); // Use router.push for navigation
       return;
     }
 
     // Fetch Dashboard Data
     const fetchData = async () => {
       try {
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
         const res = await fetch(`${API_URL}/api/market/dashboard`);
         if (res.ok) {

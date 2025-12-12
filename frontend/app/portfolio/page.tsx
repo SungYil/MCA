@@ -71,9 +71,7 @@ export default function PortfolioPage() {
     }, [activeTab]);
 
     const getApiUrl = () => {
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        return process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+        return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     };
 
     const handleAuthError = () => {
