@@ -78,6 +78,8 @@ export default function StockDetailPage() {
         }
     };
 
+    const [avgCost, setAvgCost] = useState<number | undefined>(undefined);
+
     useEffect(() => {
         if (!ticker) return;
 
@@ -86,6 +88,7 @@ export default function StockDetailPage() {
         const hostname = window.location.hostname;
         const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
 
+        // Fetch Stock Data
         fetch(`${API_URL}/api/stocks/${ticker}/full`)
             .then((res) => {
                 if (!res.ok) throw new Error('Failed to fetch stock data');
@@ -102,10 +105,35 @@ export default function StockDetailPage() {
             });
 
         checkWatchlistStatus();
+        fetchPortfolioItem(); // Check for ownership/avg cost
     }, [ticker]);
 
+    const fetchPortfolioItem = async () => {
+        // Simple way: Fetch all and find. 
+        // Optimization: Create specific endpoint later if needed.
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || `${protocol}//${hostname}:8000`;
+
+        try {
+            const res = await fetch(`${API_URL}/api/portfolio`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const list = await res.json();
+                const item = list.find((p: any) => p.ticker === ticker);
+                if (item) {
+                    setAvgCost(item.average_cost);
+                }
+            }
+        } catch (err) { console.error(err); }
+    };
+
     if (loading) return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading...</div>;
-    // Error state is handled securely
+    // ... error handling ...
     if (!data && !loading) return <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">No Data Found</div>;
     if (!data) return null;
 
@@ -115,6 +143,13 @@ export default function StockDetailPage() {
     return (
         <main className="min-h-screen bg-gray-900 text-white p-6 md:p-12">
             <div className="max-w-6xl mx-auto">
+                <button
+                    onClick={() => window.location.href = '/portfolio'}
+                    className="mb-4 text-gray-400 hover:text-white flex items-center gap-2 transition-colors"
+                >
+                    ← Back to Dashboard
+                </button>
+
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-gray-800 pb-6">
                     <div>
@@ -141,8 +176,15 @@ export default function StockDetailPage() {
 
                 {/* Chart Section */}
                 <div className="mb-8 bg-gray-800/30 p-6 rounded-lg border border-gray-700">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-300">Price History (1 Year)</h3>
-                    <StockChart ticker={ticker} />
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-gray-300">Price History</h3>
+                        {avgCost && (
+                            <span className="text-sm text-yellow-500 font-mono bg-yellow-900/20 px-2 py-1 rounded">
+                                My Avg Cost: ${avgCost.toFixed(2)}
+                            </span>
+                        )}
+                    </div>
+                    <StockChart ticker={ticker} averageCost={avgCost} />
                 </div>
 
                 {/* Description */}
