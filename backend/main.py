@@ -41,7 +41,11 @@ app.include_router(market.router)
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for MVP/EC2
+    allow_origins=[
+        "https://mca.moibluu.com", 
+        "http://localhost:3000",
+        "https://apimca.moibluu.com" 
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
