@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { FullStockData } from '@/types/stock';
+import StockChart from '@/components/StockChart';
 
 export default function StockDetailPage() {
     const params = useParams();
@@ -136,6 +137,12 @@ export default function StockDetailPage() {
                             {isPositive ? '+' : ''}{price.change.toFixed(2)} ({price.change_percent.toFixed(2)}%)
                         </div>
                     </div>
+                </div>
+
+                {/* Chart Section */}
+                <div className="mb-8 bg-gray-800/30 p-6 rounded-lg border border-gray-700">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-300">Price History (1 Year)</h3>
+                    <StockChart ticker={ticker} />
                 </div>
 
                 {/* Description */}

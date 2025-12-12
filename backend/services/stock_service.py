@@ -216,6 +216,56 @@ class StockService:
             logger.error(f"Error fetching dividends for {ticker}: {e}")
             return self._get_mock_dividends(ticker)
 
+    def get_price_history(self, ticker: str, start_date: str = None) -> List[Dict[str, Any]]:
+        """
+        Fetch daily price history.
+        """
+        ticker = ticker.upper()
+        if not self.api_key:
+             # Return a generated mock history for graph viz
+             return self._get_mock_history(ticker)
+
+        try:
+            if not start_date:
+                # Default to 1 year
+                from datetime import datetime, timedelta
+                start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+            
+            url = f"{self.base_url}/tiingo/daily/{ticker}/prices?startDate={start_date}&columns=date,close,volume"
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Token {self.api_key}'
+            }
+            response = requests.get(url, headers=headers, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            
+            history = []
+            if isinstance(data, list):
+                for row in data:
+                    history.append({
+                        "date": row.get('date')[:10], # YYYY-MM-DD
+                        "close": row.get('close'),
+                        "volume": row.get('volume')
+                    })
+            return history
+            
+        except Exception as e:
+            logger.error(f"Error fetching history for {ticker}: {e}")
+            return self._get_mock_history(ticker)
+
+    def _get_mock_history(self, ticker):
+        # Generate some sine wave-ish mock data
+        import math
+        from datetime import datetime, timedelta
+        base_price = 150.0
+        data = []
+        for i in range(30):
+            dt = (datetime.now() - timedelta(days=30-i)).strftime('%Y-%m-%d')
+            price = base_price + (math.sin(i) * 10)
+            data.append({"date": dt, "close": round(price, 2), "volume": 1000000})
+        return data
+
     # --- MOCK FALLBACKS ---
     def _get_mock_profile(self, ticker):
         return {
