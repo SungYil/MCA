@@ -48,7 +48,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://apimca.moibluu.com:8000
+        NEXT_PUBLIC_API_URL: https://apimca.moibluu.com:8000
     container_name: mca_frontend
     ports:
       - "3000:3000"
