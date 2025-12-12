@@ -354,5 +354,34 @@ class StockService:
             logger.error(f"Error searching tickers for {query}: {e}")
             return []
 
+    def get_market_brief_data(self) -> Dict[str, Any]:
+        """
+        Fetch data for market briefing:
+        1. Indices (SPY, QQQ, DIA) cached prices.
+        2. General Market News (general news endpoint).
+        """
+        # 1. Fetch Key Indices
+        indices = ["spy", "qqq", "dia"] 
+        market_data = {}
+        
+        for ticker in indices:
+            try:
+                price = self.get_stock_price(ticker.upper())
+                market_data[ticker.upper()] = price
+            except:
+                market_data[ticker.upper()] = {"price": 0, "change_percent": 0}
+
+        # 2. Fetch General News 
+        # Using SPY as a proxy for "Market News" if 'general' tag isn't explicitly supported in this helper
+        try:
+            news_items = self.get_stock_news("SPY", limit=10)
+        except:
+            news_items = []
+
+        return {
+            "indices": market_data,
+            "news": news_items
+        }
+
 # Singleton instance
 stock_service = StockService()

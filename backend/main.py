@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal
 from models import schema
-from routers import stocks, watchlist, auth, portfolio
+from routers import stocks, watchlist, auth, portfolio, market
 
 # Create tables on startup
 Base.metadata.create_all(bind=engine)
@@ -35,6 +35,7 @@ app.include_router(stocks.router)
 app.include_router(watchlist.router)
 app.include_router(auth.router)
 app.include_router(portfolio.router)
+app.include_router(market.router)
 
 
 # Configure CORS

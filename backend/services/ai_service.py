@@ -197,5 +197,55 @@ Write in a warm but expert tone (Korean ~해요체/합니다체). Use Markdown f
             logger.error(f"Gemini API call failed: {e}")
             raise e
 
+    async def generate_market_briefing(self, market_data: Dict[str, Any]) -> str:
+        """
+        Generates a Bloomberg-style daily market briefing.
+        """
+        indices = market_data.get("indices", {})
+        news_items = market_data.get("news", [])
+
+        # Format Indices
+        indices_text = ", ".join([
+            f"{k}: ${v.get('price', 0):.2f} ({v.get('change_percent', 0):.2f}%)" 
+            for k, v in indices.items()
+        ])
+
+        # Format News
+        news_text = "\n".join([
+            f"- [{item.get('publishedDate')[:10]}] {item.get('title')} ({item.get('source')})"
+            for item in news_items[:8]
+        ])
+
+        prompt = f"""
+[SYSTEM ROLE]
+You are a top-tier financial news anchor (like Bloomberg or CNBC) for a Korean audience.
+Your task is to produce a "Daily Market Briefing" (오늘의 미국 증시 브리핑).
+
+[MARKET DATA]
+Indices: {indices_text}
+
+[TOP NEWS HEADLINES]
+{news_text}
+
+[INSTRUCTIONS]
+Based on the data above, write a professional, engaging, and insightful market report in Korean.
+Structure:
+
+# 🇺🇸 오늘의 미국 증시 요약
+(Top section: Summarize the overall market sentiment based on indices data. Bullish/Bearish/Mixed?)
+
+## 📰 주요 헤드라인
+(Bulleted list of the most critical news items, rewritten in natural Korean. Filter out noise.)
+
+## 🧐 심층 분석 및 전망
+(Synthesize the news and price action to explain WHY the market moved this way. Provide a short-term outlook.)
+
+## 💡 투자자 체크포인트
+(1-2 key takeaways for personal investors.)
+
+Tone: Professional, Insightful, and Crisp. Use Markdown.
+"""
+        return await self._call_gemini(prompt)
+
 # Singleton
 ai_service = AIService()
