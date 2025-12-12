@@ -63,3 +63,12 @@ class WatchlistItem(Base):
     
     user = relationship("User", back_populates="watchlist_items")
     stock = relationship("Stock", back_populates="watchlist_entries")
+
+class MarketReport(Base):
+    __tablename__ = "market_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    report_type = Column(String) # "Morning", "Afternoon", "Evening"
+    content = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
