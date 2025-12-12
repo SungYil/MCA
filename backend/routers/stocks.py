@@ -46,6 +46,8 @@ async def get_price(ticker: str):
 async def get_dividends(ticker: str):
     return stock_service.get_dividend_history(ticker)
 
+from services.sec_service import sec_service
+
 @router.get("/{ticker}/full")
 async def get_full_stock_data(ticker: str):
     """
@@ -54,5 +56,6 @@ async def get_full_stock_data(ticker: str):
     return {
         "profile": stock_service.get_stock_profile(ticker),
         "price": stock_service.get_stock_price(ticker),
-        "dividends": stock_service.get_dividend_history(ticker)
+        "dividends": stock_service.get_dividend_history(ticker),
+        "sec_filings_url": sec_service.get_edgar_url(ticker)
     }

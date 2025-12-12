@@ -140,7 +140,20 @@ export default function StockDetailPage() {
 
                 {/* Description */}
                 <div className="mb-10 bg-gray-800/50 p-6 rounded-lg border border-gray-700">
-                    <h3 className="text-lg font-semibold mb-2 text-gray-300">Company Profile</h3>
+                    <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-lg font-semibold text-gray-300">Company Profile</h3>
+                        {data.sec_filings_url && (
+                            <a
+                                href={data.sec_filings_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1 rounded-full border border-gray-600 transition-colors flex items-center gap-1"
+                                title="Official SEC Filings (10-K, 10-Q)"
+                            >
+                                🏛️ Verify on SEC EDGAR
+                            </a>
+                        )}
+                    </div>
                     <p className="text-gray-400 leading-relaxed">{profile.description}</p>
                     <div className="mt-4 text-sm text-gray-500">
                         Market Cap: <span className="text-gray-300">${(profile.market_cap / 1e9).toFixed(2)}B</span>

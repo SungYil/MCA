@@ -28,4 +28,5 @@ export interface FullStockData {
     profile: StockProfile;
     price: StockPrice;
     dividends: DividendInfo;
+    sec_filings_url?: string;
 }
