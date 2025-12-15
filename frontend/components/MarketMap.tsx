@@ -10,7 +10,34 @@ interface MarketMapProps {
     }[];
 }
 
-// FINVIZ-style Categorized Treemap
+// Custom Treemap Types
+interface Rect {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+interface MarketItem {
+    ticker: string;
+    change_percent: number;
+    price: number;
+    weight: number;
+    sector?: string;
+}
+
+interface TreemapNode extends MarketItem {
+    rect: Rect;
+}
+
+interface SectorNode {
+    name: string;
+    weight: number;
+    rect: Rect;
+    items: TreemapNode[];
+}
+
+// FINVIZ-style Categorized Treemap (Custom Slice-and-Dice Layout)
 export default function MarketMap({ data }: MarketMapProps) {
     if (!data || data.length === 0) {
         return (
@@ -20,86 +47,151 @@ export default function MarketMap({ data }: MarketMapProps) {
         );
     }
 
-    // 1. Group data by Sector
-    const sectors: { [key: string]: typeof data } = {};
+    // --- Layout Engine ---
+
+    // Sort items desc
+    const sortedData = [...data].sort((a, b) => b.weight - a.weight);
+
+    // Group by Sector
+    const sectorsMap: { [key: string]: MarketItem[] } = {};
     const sectorWeights: { [key: string]: number } = {};
 
-    data.forEach(item => {
+    sortedData.forEach(item => {
         const s = item.sector || "Others";
-        if (!sectors[s]) {
-            sectors[s] = [];
+        if (!sectorsMap[s]) {
+            sectorsMap[s] = [];
             sectorWeights[s] = 0;
         }
-        sectors[s].push(item);
+        sectorsMap[s].push(item);
         sectorWeights[s] += item.weight;
     });
 
-    // 2. Sort Sectors by Total Weight (Largest TopLeft)
-    const sortedSectors = Object.keys(sectors).sort((a, b) => sectorWeights[b] - sectorWeights[a]);
-    const totalMarketWeight = Object.values(sectorWeights).reduce((a, b) => a + b, 0);
+    const sectorNames = Object.keys(sectorsMap).sort((a, b) => sectorWeights[b] - sectorWeights[a]);
 
-    // 3. Finviz-style Muted/Professional Color Palette
+    // Recursive Slice-and-Dice function
+    // items: list of objects with 'weight'
+    // rect: available drawing area {x, y, w, h} (in percentages 0-100)
+    // returns: list of items strictly mapped to rects
+    function layoutItems<T extends { weight: number }>(items: T[], rect: Rect): (T & { rect: Rect })[] {
+        if (items.length === 0) return [];
+        if (items.length === 1) {
+            return [{ ...items[0], rect: { ...rect } }];
+        }
+
+        // Split logic: Take the first (largest) item, give it a slice, recurse
+        const totalW = items.reduce((sum, i) => sum + i.weight, 0);
+        const item = items[0];
+        const itemShare = item.weight / totalW;
+
+        const result: (T & { rect: Rect })[] = [];
+
+        let itemRect: Rect;
+        let remainderRect: Rect;
+
+        // Split along longest axis to maintain aspect ratio aspect
+        if (rect.w > rect.h) {
+            // Split Vertically (Left | Right)
+            const itemW = rect.w * itemShare;
+            itemRect = { x: rect.x, y: rect.y, w: itemW, h: rect.h };
+            remainderRect = { x: rect.x + itemW, y: rect.y, w: rect.w - itemW, h: rect.h };
+        } else {
+            // Split Horizontally (Top | Bottom)
+            const itemH = rect.h * itemShare;
+            itemRect = { x: rect.x, y: rect.y, w: rect.w, h: itemH };
+            remainderRect = { x: rect.x, y: rect.y + itemH, w: rect.w, h: rect.h - itemH };
+        }
+
+        result.push({ ...item, rect: itemRect });
+
+        // Recurse for the rest
+        const remainderItems = layoutItems(items.slice(1), remainderRect);
+        return [...result, ...remainderItems];
+    }
+
+    // 1. Layout Sectors
+    const sectorNodesInput = sectorNames.map(name => ({ name, weight: sectorWeights[name] }));
+    const sectorLayout = layoutItems(sectorNodesInput, { x: 0, y: 0, w: 100, h: 100 });
+
+    // 2. Layout Stocks within Sectors
+    const finalTree: SectorNode[] = sectorLayout.map(sectorNode => {
+        const items = sectorsMap[sectorNode.name];
+        // Layout items relative to 0-100% of the SECTOR box
+        const itemLayout = layoutItems(items, { x: 0, y: 0, w: 100, h: 100 });
+
+        return {
+            name: sectorNode.name,
+            weight: sectorNode.weight,
+            rect: sectorNode.rect,
+            items: itemLayout
+        };
+    });
+
+
+    // Color Palette
     const getBgColor = (percent: number) => {
-        if (percent > 3) return 'bg-[#0a4d3c]'; // Dark Green (Strong Buy)
-        if (percent > 0) return 'bg-[#147a61]'; // Standard Green
-        if (percent === 0) return 'bg-[#2d3748]'; // Gray (Neutral)
-        if (percent > -3) return 'bg-[#82202b]'; // Standard Red
-        return 'bg-[#5c131a]'; // Dark Red (Strong Sell)
+        if (percent > 3) return 'bg-[#0a4d3c]';
+        if (percent > 0) return 'bg-[#147a61]';
+        if (percent === 0) return 'bg-[#2d3748]';
+        if (percent > -3) return 'bg-[#82202b]';
+        return 'bg-[#5c131a]';
     };
 
     return (
-        <div className="w-full h-full min-h-[600px] bg-[#1a202c] rounded-lg overflow-hidden border border-gray-800 flex flex-wrap content-start p-1">
-            {sortedSectors.map((sectorName) => {
-                const sectorItems = sectors[sectorName].sort((a, b) => b.weight - a.weight);
-                const sectorTotalWeight = sectorWeights[sectorName];
-
-                // Calculate sizing for the SECTOR container
-                // We use a relative width percentage based on total weight
-                const sectorWidthPercent = (sectorTotalWeight / totalMarketWeight) * 100;
-
-                return (
-                    <div
-                        key={sectorName}
-                        className="flex flex-col border border-gray-900 bg-gray-900/50 relative group overflow-hidden"
-                        style={{
-                            // Approximate layout: Flex grow based on weight
-                            flexGrow: sectorTotalWeight,
-                            width: `${sectorWidthPercent * 1.5}%`, // Tuned multiplier for fitting
-                            minWidth: '140px',
-                            minHeight: '150px' // Ensure sector box has presence
-                        }}
-                    >
-                        {/* Sector Header */}
-                        <div className="bg-[#111] text-xs font-bold text-gray-400 px-2 py-1 uppercase tracking-wider border-b border-gray-800 sticky top-0 z-10 truncate">
-                            {sectorName}
+        <div className="w-full h-full min-h-[600px] relative bg-[#1a202c] rounded-lg overflow-hidden border border-gray-800 select-none">
+            {finalTree.map((sector) => (
+                <div
+                    key={sector.name}
+                    className="absolute border border-gray-900 bg-gray-900/20 overflow-hidden group"
+                    style={{
+                        left: `${sector.rect.x}%`,
+                        top: `${sector.rect.y}%`,
+                        width: `${sector.rect.w}%`,
+                        height: `${sector.rect.h}%`,
+                    }}
+                >
+                    {/* Sector Label - Only show if box is big enough */}
+                    {sector.rect.h > 5 && sector.rect.w > 5 && (
+                        <div className="absolute top-0 left-0 bg-[#00000080] text-[10px] md:text-xs font-bold text-gray-300 px-1 py-0.5 z-10 truncate max-w-full pointer-events-none border-b border-r border-gray-900/50 rounded-br">
+                            {sector.name}
                         </div>
+                    )}
 
-                        {/* Stocks Container (Inner Flex) */}
-                        <div className="flex-1 flex flex-wrap content-start w-full h-full">
-                            {sectorItems.map(item => (
-                                <div
-                                    key={item.ticker}
-                                    className={`${getBgColor(item.change_percent)} border border-gray-900 hover:brightness-125 transition-all cursor-pointer flex flex-col items-center justify-center text-white overflow-hidden p-0.5 relative group/item`}
+                    {/* Stock Items */}
+                    {sector.items.map((stock) => (
+                        <div
+                            key={stock.ticker}
+                            className={`absolute ${getBgColor(stock.change_percent)} border border-gray-900/50 hover:brightness-125 transition-all cursor-pointer flex flex-col items-center justify-center text-white overflow-hidden`}
+                            style={{
+                                left: `${stock.rect.x}%`,
+                                top: `${stock.rect.y}%`,
+                                width: `${stock.rect.w}%`,
+                                height: `${stock.rect.h}%`,
+                            }}
+                            title={`${stock.ticker}: ${stock.change_percent}%`}
+                        >
+                            {/* Adaptive Text Sizing */}
+                            <span
+                                className="font-bold drop-shadow-sm truncate text-center leading-tight w-full px-0.5"
+                                style={{
+                                    fontSize: Math.min(stock.rect.w * 4, stock.rect.h * 1.5, 16) + 'px'
+                                }}
+                            >
+                                {stock.ticker}
+                            </span>
+                            {stock.rect.h > 15 && (
+                                <span
+                                    className="font-medium opacity-80 leading-none mt-0.5"
                                     style={{
-                                        flexGrow: item.weight,
-                                        width: `${(item.weight / sectorTotalWeight) * 100}%`,
-                                        minWidth: '50px',
-                                        minHeight: '40px'
+                                        fontSize: Math.min(stock.rect.w * 3, 11) + 'px'
                                     }}
-                                    title={`${item.ticker}: ${item.change_percent}%`}
                                 >
-                                    <span className="font-bold text-xs md:text-sm drop-shadow-sm truncate w-full text-center leading-tight">
-                                        {item.ticker}
-                                    </span>
-                                    <span className="text-[10px] font-medium opacity-80 leading-none mt-0.5">
-                                        {item.change_percent > 0 ? '+' : ''}{item.change_percent.toFixed(2)}%
-                                    </span>
-                                </div>
-                            ))}
+                                    {stock.change_percent > 0 ? '+' : ''}{stock.change_percent.toFixed(2)}%
+                                </span>
+                            )}
                         </div>
-                    </div>
-                );
-            })}
+                    ))}
+                </div>
+            ))}
         </div>
     );
 }
