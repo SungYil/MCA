@@ -88,29 +88,36 @@ def get_dashboard_summary():
     rate = stock_service.get_exchange_rate("usd", "krw")
 
     # 2. Market Map Data
+    # 2. Market Map Data (Top ~50 US Stocks)
     map_tickers = [
-        "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", 
-        "AVGO", "COST", "PEP", "KO", "JPM", "AMD", "NFLX",
-        "QQQ", "SPY", "DIA" 
+        "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", # Mag 7
+        "AVGO", "AMD", "QCOM", "TXN", "INTC", "MU", "CRWD", "PLTR", # Semis/Tech
+        "JPM", "V", "MA", "BAC", "WFC", "GS", "MS", "BLK", # Financials
+        "LLY", "UNH", "JNJ", "MRK", "ABBV", "PFE", "TMO", # Healthcare
+        "WMT", "COST", "PG", "KO", "PEP", "HD", "MCD", "NKE", "SBUX", # Consumer
+        "NFLX", "DIS", "CMCSA", "TMUS", # Comm
+        "XOM", "CVX", "CAT", "GE", "DE", "HON", "BA", # Industrial/Energy
+        "QQQ", "SPY", "DIA" # Indices
     ]
     
     # Batch fetch
     batch_data = stock_service.get_batch_stock_prices(map_tickers)
     
-    weights = {
-        "AAPL": 3500, "MSFT": 3400, "NVDA": 3300, "GOOGL": 2100, "AMZN": 2200, 
-        "META": 1500, "TSLA": 900, "AVGO": 800, "JPM": 600, "COST": 400,
-        "AMD": 300, "NFLX": 300, "PEP": 230, "KO": 280
-    }
+    def get_weight(ticker):
+        if ticker in ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META"]: return 4000
+        if ticker in ["TSLA", "AVGO", "LLY", "JPM", "V", "WMT", "XOM", "UNH"]: return 2000
+        if ticker in ["QQQ", "SPY", "DIA"]: return 0 # Hide indices from visual map
+        return 500 # Default for others
 
     heatmap_data = []
     for item in batch_data:
         t = item["ticker"]
+        w = get_weight(t)
         heatmap_data.append({
             "ticker": t,
             "change_percent": item["change_percent"],
             "price": item["price"],
-            "weight": weights.get(t, 100) # Default weight
+            "weight": w
         })
 
     # FINAL SAFEGUARD: If heatmap is empty (YF failed + Mock failed), force data.
