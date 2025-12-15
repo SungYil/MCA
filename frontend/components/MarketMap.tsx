@@ -1,7 +1,5 @@
 'use client';
 
-import { ResponsiveContainer, Treemap, Tooltip } from 'recharts';
-
 interface MarketMapProps {
     data: {
         ticker: string;
@@ -10,68 +8,6 @@ interface MarketMapProps {
         weight: number;
     }[];
 }
-
-const CustomizedContent = (props: any) => {
-    const { x, y, width, height, depth, payload, name } = props;
-
-    // Only render leaf nodes (depth 1 in our case, since we have Root -> Tickers)
-    if (depth < 1 || !payload) return <g />;
-
-    // Safety check for change_percent
-    const percent = payload.change_percent !== undefined ? payload.change_percent : 0;
-
-    // Determine color based on % change
-    let bgColor = '#374151'; // default grey
-    if (percent > 3) bgColor = '#059669'; // emerald-600
-    else if (percent > 1) bgColor = '#10B981'; // emerald-500
-    else if (percent > 0) bgColor = '#34D399'; // emerald-400
-    else if (percent === 0) bgColor = '#4B5563'; // gray-600
-    else if (percent > -1) bgColor = '#F87171'; // red-400
-    else if (percent > -3) bgColor = '#EF4444'; // red-500
-    else bgColor = '#DC2626'; // red-600
-
-    return (
-        <g>
-            <rect
-                x={x}
-                y={y}
-                width={width}
-                height={height}
-                style={{
-                    fill: bgColor,
-                    stroke: '#111827', // darker border
-                    strokeWidth: 2,
-                    strokeOpacity: 1,
-                }}
-            />
-            {width > 30 && height > 30 && (
-                <text
-                    x={x + width / 2}
-                    y={y + height / 2 - 6}
-                    textAnchor="middle"
-                    fill="#fff"
-                    fontSize={Math.min(width / 5, 14)}
-                    fontWeight="bold"
-                    pointerEvents="none"
-                >
-                    {name}
-                </text>
-            )}
-            {width > 30 && height > 30 && (
-                <text
-                    x={x + width / 2}
-                    y={y + height / 2 + 10}
-                    textAnchor="middle"
-                    fill="#fff"
-                    fontSize={Math.min(width / 7, 11)}
-                    pointerEvents="none"
-                >
-                    {percent > 0 ? '+' : ''}{percent.toFixed(2)}%
-                </text>
-            )}
-        </g>
-    );
-};
 
 export default function MarketMap({ data }: MarketMapProps) {
     if (!data || data.length === 0) {
@@ -82,52 +18,47 @@ export default function MarketMap({ data }: MarketMapProps) {
         );
     }
 
-    // Transform data for Recharts Treemap input format (needs 'children' for standard tree, but flat list works if configured right)
-    // Actually Recharts expects: [{name: 'axis', children: [...]}]
+    // Sort by weight desc for better visual layout
+    const sortedData = [...data].sort((a, b) => b.weight - a.weight);
+    const totalWeight = sortedData.reduce((sum, item) => sum + item.weight, 0);
 
-    // We group them into a single root for simplicity
-    const treeData = [
-        {
-            name: "Market",
-            children: data.map(item => ({
-                name: item.ticker,
-                size: item.weight, // Used for area size
-                ...item
-            }))
-        }
-    ];
+    const getBgColor = (percent: number) => {
+        if (percent > 3) return 'bg-emerald-600';
+        if (percent > 1) return 'bg-emerald-500';
+        if (percent > 0) return 'bg-emerald-400';
+        if (percent === 0) return 'bg-gray-600';
+        if (percent > -1) return 'bg-red-400';
+        if (percent > -3) return 'bg-red-500';
+        return 'bg-red-600';
+    };
 
     return (
-        <div className="w-full h-[300px] bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
-            <ResponsiveContainer width="100%" height="100%">
-                <Treemap
-                    data={treeData}
-                    dataKey="size"
-                    aspectRatio={4 / 3}
-                    stroke="#fff"
-                    fill="#8884d8"
-                    isAnimationActive={false}
-                    content={<CustomizedContent />}
-                >
-                    <Tooltip
-                        content={({ payload }) => {
-                            if (payload && payload.length) {
-                                const d = payload[0].payload;
-                                return (
-                                    <div className="bg-gray-800 border border-gray-600 p-2 rounded text-xs text-white shadow-lg z-50">
-                                        <p className="font-bold">{d.name}</p>
-                                        <p>Price: ${d.price}</p>
-                                        <p className={d.change_percent >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                                            Change: {d.change_percent.toFixed(2)}%
-                                        </p>
-                                    </div>
-                                );
-                            }
-                            return null;
+        <div className="w-full h-[300px] bg-gray-900 rounded-lg overflow-hidden border border-gray-700 flex flex-wrap content-start">
+            {sortedData.map((item) => {
+                // Calculate relative width/height approximation
+                // Simple Flex approach: flex-grow based on weight
+                // We clamp min-width to ensure text is visible
+                const colorClass = getBgColor(item.change_percent);
+
+                return (
+                    <div
+                        key={item.ticker}
+                        className={`${colorClass} relative border border-gray-900/50 hover:brightness-110 transition-all cursor-default flex flex-col items-center justify-center text-white overflow-hidden p-1`}
+                        style={{
+                            flexGrow: item.weight,
+                            minWidth: '80px', // Minimum width to be readable
+                            height: '100px',  // Fixed row height approach or percentage?
+                            // Let's try to make it feel like a grid by setting width %
+                            width: `${(item.weight / totalWeight) * 100 * 3}%` // Multiplier to force wrap
                         }}
-                    />
-                </Treemap>
-            </ResponsiveContainer>
+                    >
+                        <span className="font-bold text-sm md:text-base drop-shadow-md">{item.ticker}</span>
+                        <span className="text-xs md:text-sm font-medium drop-shadow-md">
+                            {item.change_percent > 0 ? '+' : ''}{item.change_percent.toFixed(2)}%
+                        </span>
+                    </div>
+                );
+            })}
         </div>
     );
 }
