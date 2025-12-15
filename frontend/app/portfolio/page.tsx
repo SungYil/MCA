@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TickerSearch from '@/components/TickerSearch';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface PortfolioItem {
     id: number;
@@ -401,8 +403,13 @@ export default function PortfolioPage() {
                         {analysis && (
                             <div className="bg-gray-800/90 backdrop-blur border border-purple-500/30 p-8 rounded-xl shadow-2xl relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-9xl text-purple-500 select-none">AI</div>
-                                <div className="prose prose-invert max-w-none text-gray-200 leading-relaxed whitespace-pre-wrap relative z-10">
-                                    {analysis}
+                                <div className="relative z-10">
+                                    <ReactMarkdown
+                                        className="prose prose-invert max-w-none text-gray-200 leading-relaxed"
+                                        remarkPlugins={[remarkGfm]}
+                                    >
+                                        {analysis}
+                                    </ReactMarkdown>
                                 </div>
                             </div>
                         )}
