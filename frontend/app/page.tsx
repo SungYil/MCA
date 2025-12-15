@@ -44,107 +44,130 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-6 md:p-12 bg-[#050505]">
-      {/* Header Section */}
-      <div className="z-10 w-full max-w-6xl items-center justify-between font-mono text-sm lg:flex border-b border-gray-800 pb-6 mb-8">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
-            Personal Investment Assistant
-          </h1>
-          <p className="text-gray-500 text-xs">AI-Powered Market Intelligence</p>
-        </div>
-
-        {/* Right Header: Clock & Exchange Rate */}
-        <div className="flex items-center gap-6 mt-4 lg:mt-0">
-          {dashboardData && (
-            <div className="text-right">
-              <p className="text-xs text-gray-500">USD/KRW</p>
-              <p className="text-xl font-bold text-yellow-500">
-                ₩{dashboardData.exchange_rate?.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-              </p>
+    <div className="min-h-screen bg-[#050505] text-gray-200">
+      {/* Top Navigation Bar */}
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-gray-900/80 border-b border-gray-800">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-tr from-emerald-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <span className="text-white font-bold text-lg">M</span>
             </div>
-          )}
-          <LiveClock />
-          <button
-            onClick={() => {
-              localStorage.removeItem('token');
-              window.location.href = '/login';
-            }}
-            className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-300 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+              MCA Global
+            </h1>
+          </div>
 
-      {/* Main Content Grid */}
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <nav className="hidden md:flex items-center gap-1 bg-gray-800/50 p-1 rounded-xl border border-gray-700/50">
+            {[
+              { name: 'Dashboard', path: '/', active: true },
+              { name: 'Portfolio', path: '/portfolio', active: false },
+              { name: 'Watchlist', path: '/watchlist', active: false },
+              { name: 'AI Analysis', path: '/analysis', active: false },
+            ].map((item) => (
+              <button
+                key={item.name}
+                onClick={() => router.push(item.path)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${item.active
+                    ? 'bg-emerald-500/10 text-emerald-400 shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                  }`}
+              >
+                {item.name}
+              </button>
+            ))}
+          </nav>
 
-        {/* Left Col: Market Map (Spans 2 cols usually, or full width if preferred) */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl relative overflow-hidden group hover:border-gray-700 transition-colors">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Market Heatmap
-              </h2>
-              <span className="text-xs text-gray-500">Real-time (Top 15)</span>
-            </div>
-
-            {loading ? (
-              <div className="h-[300px] flex items-center justify-center text-gray-500 animate-pulse">
-                Loading Market Data...
+          <div className="flex items-center gap-4">
+            {dashboardData?.exchange_rate && (
+              <div className="hidden lg:flex items-center gap-2 text-sm bg-gray-800/50 px-3 py-1 rounded-full border border-gray-700/50">
+                <span className="text-gray-500">USD/KRW</span>
+                <span className="text-emerald-400 font-mono">₩{dashboardData.exchange_rate.toFixed(1)}</span>
               </div>
-            ) : (
-              <MarketMap data={dashboardData?.heatmap || []} />
             )}
-          </div>
-
-          {/* Quick Actions / Navigation Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/portfolio" className="group p-5 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 transition-all hover:scale-[1.02]">
-              <h3 className="text-emerald-400 font-bold mb-1 group-hover:text-emerald-300">Portfolio &rarr;</h3>
-              <p className="text-xs text-gray-400">View holdings, dividends & performance.</p>
-            </Link>
-            <Link href="/watchlist" className="group p-5 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 transition-all hover:scale-[1.02]">
-              <h3 className="text-blue-400 font-bold mb-1 group-hover:text-blue-300">Watchlist &rarr;</h3>
-              <p className="text-xs text-gray-400">Track interested stocks & alerts.</p>
-            </Link>
-            <Link href="/analysis" className="group p-5 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 transition-all hover:scale-[1.02]">
-              <h3 className="text-purple-400 font-bold mb-1 group-hover:text-purple-300">AI Analysis &rarr;</h3>
-              <p className="text-xs text-gray-400">Daily market briefing & smart insights.</p>
-            </Link>
+            <div className="hidden md:block">
+              <LiveClock />
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* Right Col: AI Highlights / Feeds (Placeholder for future or quick stats) */}
-        <div className="space-y-6">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 h-full min-h-[400px]">
-            <h3 className="text-lg font-semibold text-white mb-4">Market Pulse</h3>
-            <div className="space-y-4">
-              <div className="p-3 bg-gray-800/50 rounded border border-gray-700/50">
-                <p className="text-xs text-gray-400 mb-1">Nasdaq (QQQ) / S&P 500 (SPY)</p>
-                <div className="flex justify-between items-end">
-                  <span className="text-lg font-mono font-bold text-white">
-                    {(() => {
-                      const qqq = dashboardData?.heatmap?.find((x: any) => x.ticker === 'QQQ');
-                      const spy = dashboardData?.heatmap?.find((x: any) => x.ticker === 'SPY');
-                      const item = qqq || spy;
-                      return item ? `$${item.price.toFixed(2)} (${item.change_percent.toFixed(2)}%)` : 'Loading...';
-                    })()}
-                  </span>
-                  {/* We didn't fetch QQQ in heatmap strict list, handled in generic */}
+      <main className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Main Content Grid: Heatmap (Left) | Pulse (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-120px)] min-h-[600px]">
+
+          {/* Left: Market Heatmap (Expanded) */}
+          <div className="lg:col-span-3 bg-gray-900 border border-gray-800 rounded-2xl p-1 flex flex-col shadow-2xl relative overflow-hidden">
+            <div className="absolute top-4 left-6 z-10 pointer-events-none flex items-center gap-2 bg-gray-900/80 px-3 py-1 rounded-full backdrop-blur-sm border border-gray-800">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+              <span className="text-sm font-bold text-white tracking-tight">Market Map</span>
+            </div>
+
+            {/* Heatmap Container - Takes full remaining height */}
+            <div className="w-full h-full">
+              {dashboardData?.heatmap ? (
+                <MarketMap data={dashboardData.heatmap} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-500 animate-pulse">
+                  Loading Market Data...
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Market Pulse & Widgets */}
+          <div className="space-y-4 flex flex-col h-full">
+            {/* Pulse Widget */}
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl flex-1 flex flex-col">
+              <h3 className="text-lg font-bold text-gray-200 mb-6 flex items-center gap-2">
+                <span className="text-blue-400">⚡</span> Market Pulse
+              </h3>
+
+              <div className="space-y-4 flex-1">
+                <div className="p-4 bg-gray-800/30 rounded-xl border border-gray-700/30">
+                  <p className="text-xs text-gray-500 mb-1 uppercase tracking-wider font-semibold">Nasdaq / S&P 500</p>
+                  <div className="flex justify-between items-end">
+                    <span className="text-2xl font-mono font-bold text-white tracking-tighter">
+                      {(() => {
+                        const qqq = dashboardData?.heatmap?.find((x: any) => x.ticker === 'QQQ');
+                        const spy = dashboardData?.heatmap?.find((x: any) => x.ticker === 'SPY');
+                        const item = qqq || spy;
+                        return item ? (
+                          <span className={item.change_percent >= 0 ? "text-emerald-400" : "text-red-400"}>
+                            {item.change_percent > 0 ? '+' : ''}{item.change_percent.toFixed(2)}%
+                          </span>
+                        ) : <span className="text-gray-600">...</span>;
+                      })()}
+                    </span>
+                    <span className="text-xs text-gray-400">QQQ/SPY</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-800/30 rounded-xl border border-gray-700/30">
+                  <p className="text-xs text-gray-500 mb-1 uppercase tracking-wider font-semibold">USD/KRW</p>
+                  <div className="flex justify-between items-end">
+                    <span className="text-xl font-mono text-white">
+                      ₩{dashboardData?.exchange_rate?.toFixed(1) || '---'}
+                    </span>
+                  </div>
                 </div>
               </div>
-              {/* Add more widgets here later */}
-              <div className="text-xs text-gray-500 italic">
-                AI Signal: "Market trend analysis based on QQQ/SPY moving averages..."
+
+              <div className="mt-auto pt-4 border-t border-gray-800">
+                <p className="text-xs text-gray-500 italic leading-relaxed">
+                  "The stock market is designed to transfer money from the Active to the Patient."
+                </p>
               </div>
+            </div>
+
+            {/* Mobile Navigation (Visible only on small screens) */}
+            <div className="lg:hidden grid grid-cols-3 gap-2">
+              <button onClick={() => router.push('/portfolio')} className="p-3 bg-gray-800 rounded-lg border border-gray-700 text-xs text-emerald-400 font-bold">Portfolio</button>
+              <button onClick={() => router.push('/watchlist')} className="p-3 bg-gray-800 rounded-lg border border-gray-700 text-xs text-blue-400 font-bold">Watchlist</button>
+              <button onClick={() => router.push('/analysis')} className="p-3 bg-gray-800 rounded-lg border border-gray-700 text-xs text-purple-400 font-bold">Analysis</button>
             </div>
           </div>
         </div>
-
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
