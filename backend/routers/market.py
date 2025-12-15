@@ -109,15 +109,32 @@ def get_dashboard_summary():
         if ticker in ["QQQ", "SPY", "DIA"]: return 0 # Hide indices from visual map
         return 500 # Default for others
 
+    def get_sector(ticker):
+        if ticker in ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "AMD", "QCOM", "TXN", "INTC", "MU", "CRWD", "PLTR", "CRM", "ADBE"]: return "Technology"
+        if ticker in ["JPM", "V", "MA", "BAC", "WFC", "GS", "MS", "BLK", "AXP"]: return "Financial"
+        if ticker in ["LLY", "UNH", "JNJ", "MRK", "ABBV", "PFE", "TMO", "BMY", "AMGN"]: return "Healthcare"
+        if ticker in ["WMT", "COST", "PG", "KO", "PEP", "HD", "MCD", "NKE", "SBUX", "CL"]: return "Consumer"
+        if ticker in ["NFLX", "DIS", "CMCSA", "TMUS", "VZ", "T"]: return "Communication"
+        if ticker in ["XOM", "CVX", "CAT", "GE", "DE", "HON", "BA", "LMT", "UPS", "UNP"]: return "Industrials"
+        if ticker in ["QQQ", "SPY", "DIA"]: return "Indices"
+        return "Others"
+
     heatmap_data = []
     for item in batch_data:
         t = item["ticker"]
         w = get_weight(t)
+        s = get_sector(t)
+        
+        # Skip indices for visual map
+        if s == "Indices":
+            continue
+
         heatmap_data.append({
             "ticker": t,
             "change_percent": item["change_percent"],
             "price": item["price"],
-            "weight": w
+            "weight": w,
+            "sector": s
         })
 
     # FINAL SAFEGUARD: If heatmap is empty (YF failed + Mock failed), force data.
