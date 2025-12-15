@@ -46,18 +46,18 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#050505] text-gray-200">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-gray-900/80 border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-tr from-emerald-500 to-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <span className="text-white font-bold text-lg">M</span>
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-gray-900/90 border-b border-gray-800 shadow-md">
+        <div className="max-w-[1600px] mx-auto px-8 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-gradient-to-tr from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <span className="text-white font-bold text-xl">M</span>
             </div>
-            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight">
               MCA Global
             </h1>
           </div>
 
-          <nav className="hidden md:flex items-center gap-1 bg-gray-800/50 p-1 rounded-xl border border-gray-700/50">
+          <nav className="hidden md:flex items-center gap-2 bg-gray-800/60 p-1.5 rounded-2xl border border-gray-700/50">
             {[
               { name: 'Dashboard', path: '/', active: true },
               { name: 'Portfolio', path: '/portfolio', active: false },
@@ -67,9 +67,9 @@ export default function Home() {
               <button
                 key={item.name}
                 onClick={() => router.push(item.path)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${item.active
-                    ? 'bg-emerald-500/10 text-emerald-400 shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                className={`px-6 py-2.5 rounded-xl text-base font-bold transition-all ${item.active
+                    ? 'bg-emerald-500/10 text-emerald-400 shadow-sm border border-emerald-500/20'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-700/60'
                   }`}
               >
                 {item.name}
@@ -77,14 +77,14 @@ export default function Home() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             {dashboardData?.exchange_rate && (
-              <div className="hidden lg:flex items-center gap-2 text-sm bg-gray-800/50 px-3 py-1 rounded-full border border-gray-700/50">
-                <span className="text-gray-500">USD/KRW</span>
-                <span className="text-emerald-400 font-mono">₩{dashboardData.exchange_rate.toFixed(1)}</span>
+              <div className="hidden xl:flex items-center gap-3 text-base bg-gray-800/60 px-4 py-2 rounded-full border border-gray-700/50">
+                <span className="text-gray-400 font-medium">USD/KRW</span>
+                <span className="text-emerald-400 font-mono font-bold">₩{dashboardData.exchange_rate.toFixed(1)}</span>
               </div>
             )}
-            <div className="hidden md:block">
+            <div className="hidden lg:block transform scale-110 origin-right">
               <LiveClock />
             </div>
           </div>

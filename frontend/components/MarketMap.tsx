@@ -33,27 +33,22 @@ export default function MarketMap({ data }: MarketMapProps) {
     };
 
     return (
-        <div className="w-full h-[300px] bg-gray-900 rounded-lg overflow-hidden border border-gray-700 flex flex-wrap content-start">
+        <div className="w-full h-full min-h-[500px] bg-gray-900 rounded-lg overflow-y-auto overflow-x-hidden border border-gray-700 flex flex-wrap content-start">
             {sortedData.map((item) => {
-                // Calculate relative width/height approximation
-                // Simple Flex approach: flex-grow based on weight
-                // We clamp min-width to ensure text is visible
                 const colorClass = getBgColor(item.change_percent);
-
                 return (
                     <div
                         key={item.ticker}
                         className={`${colorClass} relative border border-gray-900/50 hover:brightness-110 transition-all cursor-default flex flex-col items-center justify-center text-white overflow-hidden p-1`}
                         style={{
                             flexGrow: item.weight,
-                            minWidth: '80px', // Minimum width to be readable
-                            height: '100px',  // Fixed row height approach or percentage?
-                            // Let's try to make it feel like a grid by setting width %
-                            width: `${(item.weight / totalWeight) * 100 * 3}%` // Multiplier to force wrap
+                            minWidth: '60px',
+                            height: '12.5%',  // ~8 rows visible
+                            width: `${(item.weight / totalWeight) * 100 * 5}%` // Multiplier tuned for density
                         }}
                     >
-                        <span className="font-bold text-sm md:text-base drop-shadow-md">{item.ticker}</span>
-                        <span className="text-xs md:text-sm font-medium drop-shadow-md">
+                        <span className="font-bold text-xs md:text-sm drop-shadow-md truncate w-full text-center">{item.ticker}</span>
+                        <span className="text-[10px] md:text-xs font-medium drop-shadow-md">
                             {item.change_percent > 0 ? '+' : ''}{item.change_percent.toFixed(2)}%
                         </span>
                     </div>
