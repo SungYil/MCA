@@ -189,6 +189,80 @@ def add_to_portfolio(
             average_cost=new_item.average_cost
         )
 
+class PortfolioUpdateRequest(BaseModel):
+    shares: float
+    average_cost: float
+
+@router.put("/{ticker}", response_model=PortfolioItemResponse)
+def update_portfolio_item(
+    ticker: str,
+    request: PortfolioUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_current_user)
+):
+    """
+    Update an existing portfolio item (shares/cost).
+    """
+    ticker = ticker.upper()
+    item = db.query(schema.PortfolioItem).filter(
+        schema.PortfolioItem.user_id == current_user.id,
+        schema.PortfolioItem.ticker == ticker
+    ).first()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Portfolio item not found")
+
+    item.shares = request.shares
+    item.average_cost = request.average_cost
+    
+    db.commit()
+    db.refresh(item)
+    
+    # Calculate derived fields for response
+    try:
+        price_info = stock_service.get_stock_price(ticker)
+        current_price = price_info.get("price", 0.0)
+    except:
+        current_price = 0.0
+
+    current_value = current_price * item.shares
+    total_cost = item.average_cost * item.shares
+    gain_loss = current_value - total_cost
+    gain_loss_percent = (gain_loss / total_cost * 100) if total_cost > 0 else 0.0
+
+    return PortfolioItemResponse(
+        id=item.id,
+        ticker=item.ticker,
+        shares=item.shares,
+        average_cost=item.average_cost,
+        current_price=current_price,
+        current_value=current_value,
+        gain_loss=gain_loss,
+        gain_loss_percent=gain_loss_percent
+    )
+
+@router.delete("/{ticker}")
+def delete_portfolio_item(
+    ticker: str,
+    db: Session = Depends(get_db),
+    current_user: schema.User = Depends(get_current_user)
+):
+    """
+    Delete a ticker from the user's portfolio.
+    """
+    ticker = ticker.upper()
+    item = db.query(schema.PortfolioItem).filter(
+        schema.PortfolioItem.user_id == current_user.id,
+        schema.PortfolioItem.ticker == ticker
+    ).first()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Portfolio item not found")
+
+    db.delete(item)
+    db.commit()
+    return {"message": "Item deleted successfully"}
+
 class DividendItemResponse(BaseModel):
     ticker: str
     shares: float

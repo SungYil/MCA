@@ -55,6 +55,7 @@ export default function PortfolioPage() {
     const [ticker, setTicker] = useState('');
     const [shares, setShares] = useState('');
     const [avgCost, setAvgCost] = useState('');
+    const [editingTicker, setEditingTicker] = useState<string | null>(null);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -64,6 +65,7 @@ export default function PortfolioPage() {
         }
         fetchPortfolio();
     }, []);
+
 
     // Effect to fetch dividends when tab is active
     useEffect(() => {
@@ -153,12 +155,18 @@ export default function PortfolioPage() {
         }
     };
 
-    const handleAdd = async (e: React.FormEvent) => {
+    const handleAddOrUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         const token = localStorage.getItem('token');
+
         try {
-            const res = await fetch(`${getApiUrl()}/api/portfolio`, {
-                method: 'POST',
+            const method = editingTicker ? 'PUT' : 'POST';
+            const url = editingTicker
+                ? `${getApiUrl()}/api/portfolio/${editingTicker}`
+                : `${getApiUrl()}/api/portfolio`;
+
+            const res = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -175,21 +183,32 @@ export default function PortfolioPage() {
                 return;
             }
 
-            if (!res.ok) throw new Error('추가 실패');
+            if (!res.ok) throw new Error(editingTicker ? '수정 실패' : '추가 실패');
 
             fetchPortfolio();
-            setDividendData(null);
-            // TickerSearch component manages its own input state, 
-            // but we reset the parent ticker state.
-            setTicker('');
-            setShares('');
-            setAvgCost('');
+            setDividendData(null); // Reset dividends to force refetch
 
-            // Force reload of page or similar might be needed to clear TickerSearch input visually 
-            // if we don't expose a reset ref. For now, user just types new one.
+            // Reset Form and Mode
+            resetForm();
         } catch (err: any) {
             alert(err.message);
         }
+    };
+
+    const handleEdit = (item: PortfolioItem) => {
+        setTicker(item.ticker);
+        setShares(item.shares.toString());
+        setAvgCost(item.average_cost.toString());
+        setEditingTicker(item.ticker);
+        // Optional: Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const resetForm = () => {
+        setTicker('');
+        setShares('');
+        setAvgCost('');
+        setEditingTicker(null);
     };
 
     const handleDelete = async (ticker: string) => {
@@ -301,11 +320,20 @@ export default function PortfolioPage() {
                             </div>
                         </div>
 
-                        {/* Add Form */}
-                        <div className="bg-gray-800/50 p-6 rounded-xl border border-gray-700 mb-8 backdrop-blur-sm">
-                            <h2 className="text-lg font-semibold mb-4 text-gray-300">주식 추가 (수동)</h2>
-                            <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-4 items-start">
-                                <TickerSearch onSelect={(t) => setTicker(t)} />
+                        {/* Add/Edit Form */}
+                        <div className={`p-6 rounded-xl border mb-8 backdrop-blur-sm transition-colors ${editingTicker ? 'bg-indigo-900/40 border-indigo-500/50' : 'bg-gray-800/50 border-gray-700'}`}>
+                            <h2 className="text-lg font-semibold mb-4 text-gray-300">
+                                {editingTicker ? `매수 기록 수정 (${editingTicker})` : '주식 추가 (수동)'}
+                            </h2>
+                            <form onSubmit={handleAddOrUpdate} className="flex flex-col md:flex-row gap-4 items-start">
+                                {/* Ticker Search - Disabled in Edit Mode */}
+                                {editingTicker ? (
+                                    <div className="flex-1 w-full md:w-auto p-3 bg-gray-800 rounded border border-gray-600 text-gray-400 font-mono">
+                                        {editingTicker}
+                                    </div>
+                                ) : (
+                                    <TickerSearch onSelect={(t) => setTicker(t)} />
+                                )}
 
                                 <input
                                     type="number" placeholder="보유 수량" step="0.0001"
@@ -317,9 +345,17 @@ export default function PortfolioPage() {
                                     className="bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none flex-1 transition-colors w-full md:w-auto"
                                     value={avgCost} onChange={(e) => setAvgCost(e.target.value)} required
                                 />
-                                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition-all hover:scale-105 shadow-lg w-full md:w-auto">
-                                    추가하기
-                                </button>
+
+                                <div className="flex gap-2 w-full md:w-auto">
+                                    <button type="submit" className={`${editingTicker ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-3 px-6 rounded transition-all hover:scale-105 shadow-lg flex-1`}>
+                                        {editingTicker ? '수정하기' : '추가하기'}
+                                    </button>
+                                    {editingTicker && (
+                                        <button type="button" onClick={resetForm} className="bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-3 px-4 rounded transition-all">
+                                            취소
+                                        </button>
+                                    )}
+                                </div>
                             </form>
                         </div>
 
@@ -351,7 +387,10 @@ export default function PortfolioPage() {
                                                 <td className={`px-6 py-4 font-mono font-medium ${item.gain_loss >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                                     {item.gain_loss >= 0 ? '+' : ''}{item.gain_loss.toFixed(2)} ({item.gain_loss_percent.toFixed(2)}%)
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 flex gap-2">
+                                                    <button onClick={() => handleEdit(item)} className="text-blue-500 hover:text-blue-300 hover:bg-blue-900/20 px-3 py-1 rounded transition-colors text-sm">
+                                                        수정
+                                                    </button>
                                                     <button onClick={() => handleDelete(item.ticker)} className="text-red-500 hover:text-red-300 hover:bg-red-900/20 px-3 py-1 rounded transition-colors text-sm">
                                                         삭제
                                                     </button>
