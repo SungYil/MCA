@@ -224,8 +224,14 @@ class StockService:
         
         results = []
         try:
-            # yfinance download is optimized for batch
-            data = yf.download(tickers, period="5d", group_by='ticker', threads=True, progress=False)
+            # Suppress YFinance FutureWarning clutter
+            import warnings
+            warnings.simplefilter(action='ignore', category=FutureWarning)
+            
+            # yfinance batch download
+            # auto_adjust=True is now default in future versions, explicit False mimics old behavior if needed, 
+            # or we accept True. Let's send auto_adjust=True explicitly to silence warning.
+            data = yf.download(tickers, period="5d", group_by='ticker', threads=True, progress=False, auto_adjust=True)
             
             # If single ticker, structure is different
             if len(tickers) == 1:
