@@ -75,7 +75,7 @@ async def analyze_portfolio(
     
     return {"analysis": analysis_text}
 
-@router.get("/", response_model=List[PortfolioItemResponse])
+@router.get("", response_model=List[PortfolioItemResponse])
 def get_portfolio(
     db: Session = Depends(get_db), 
     current_user: schema.User = Depends(get_current_user)
@@ -114,7 +114,7 @@ def get_portfolio(
     
     return response_items
 
-@router.post("/", response_model=PortfolioItemResponse)
+@router.post("", response_model=PortfolioItemResponse)
 def add_to_portfolio(
     request: PortfolioAddRequest, 
     db: Session = Depends(get_db),
