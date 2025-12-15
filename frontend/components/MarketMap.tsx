@@ -78,7 +78,13 @@ const CustomizedContent = (props: any) => {
 };
 
 export default function MarketMap({ data }: MarketMapProps) {
-    if (!data || data.length === 0) return <div className="text-gray-500 text-sm">No map data available.</div>;
+    if (!data || data.length === 0) {
+        return (
+            <div className="w-full h-[300px] bg-gray-900 border border-gray-700 rounded-lg flex items-center justify-center text-red-400 font-bold animate-pulse">
+                ⚠️ No Market Data Available (Server Empty)
+            </div>
+        );
+    }
 
     // Transform data for Recharts Treemap input format (needs 'children' for standard tree, but flat list works if configured right)
     // Actually Recharts expects: [{name: 'axis', children: [...]}]
