@@ -404,12 +404,11 @@ export default function PortfolioPage() {
                             <div className="bg-gray-800/90 backdrop-blur border border-purple-500/30 p-8 rounded-xl shadow-2xl relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-9xl text-purple-500 select-none">AI</div>
                                 <div className="relative z-10">
-                                    <ReactMarkdown
-                                        className="prose prose-invert max-w-none text-gray-200 leading-relaxed"
-                                        remarkPlugins={[remarkGfm]}
-                                    >
-                                        {analysis}
-                                    </ReactMarkdown>
+                                    <div className="prose prose-invert max-w-none text-gray-200 leading-relaxed">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                            {analysis}
+                                        </ReactMarkdown>
+                                    </div>
                                 </div>
                             </div>
                         )}
