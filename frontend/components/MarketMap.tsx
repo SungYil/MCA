@@ -12,21 +12,15 @@ interface MarketMapProps {
 }
 
 const CustomizedContent = (props: any) => {
-    const { root, depth, x, y, width, height, index, payload, colors, rank, name, value, change_percent } = props;
+    const { x, y, width, height, depth, payload, name } = props;
 
-    if (!payload) return null;
+    // Only render leaf nodes (depth 1 in our case, since we have Root -> Tickers)
+    if (depth < 1 || !payload) return <g />;
 
-    const percent = payload.change_percent;
+    // Safety check for change_percent
+    const percent = payload.change_percent !== undefined ? payload.change_percent : 0;
+
     // Determine color based on % change
-    // Finviz style: 
-    // > +3% : #0a5c36 (Strong Green)
-    // +1~+3%: #1a9e60
-    // 0~+1% : #3ebf83
-    // 0     : #444444 (Grey)
-    // -1~0% : #e85858 
-    // -1~-3%: #d62d2d
-    // < -3% : #a61b1b (Strong Red)
-
     let bgColor = '#374151'; // default grey
     if (percent > 3) bgColor = '#059669'; // emerald-600
     else if (percent > 1) bgColor = '#10B981'; // emerald-500
@@ -45,19 +39,20 @@ const CustomizedContent = (props: any) => {
                 height={height}
                 style={{
                     fill: bgColor,
-                    stroke: '#fff',
-                    strokeWidth: 2 / (depth + 1e-10),
-                    strokeOpacity: 1 / (depth + 1e-10),
+                    stroke: '#111827', // darker border
+                    strokeWidth: 2,
+                    strokeOpacity: 1,
                 }}
             />
             {width > 30 && height > 30 && (
                 <text
                     x={x + width / 2}
-                    y={y + height / 2}
+                    y={y + height / 2 - 6}
                     textAnchor="middle"
                     fill="#fff"
-                    fontSize={Math.min(width / 5, height / 5, 16)}
+                    fontSize={Math.min(width / 5, 14)}
                     fontWeight="bold"
+                    pointerEvents="none"
                 >
                     {name}
                 </text>
@@ -65,10 +60,11 @@ const CustomizedContent = (props: any) => {
             {width > 30 && height > 30 && (
                 <text
                     x={x + width / 2}
-                    y={y + height / 2 + 14}
+                    y={y + height / 2 + 10}
                     textAnchor="middle"
                     fill="#fff"
-                    fontSize={Math.min(width / 7, height / 7, 12)}
+                    fontSize={Math.min(width / 7, 11)}
+                    pointerEvents="none"
                 >
                     {percent > 0 ? '+' : ''}{percent.toFixed(2)}%
                 </text>
@@ -110,6 +106,7 @@ export default function MarketMap({ data }: MarketMapProps) {
                     aspectRatio={4 / 3}
                     stroke="#fff"
                     fill="#8884d8"
+                    isAnimationActive={false}
                     content={<CustomizedContent />}
                 >
                     <Tooltip
