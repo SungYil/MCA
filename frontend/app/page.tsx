@@ -123,17 +123,22 @@ export default function Home() {
             <h3 className="text-lg font-semibold text-white mb-4">Market Pulse</h3>
             <div className="space-y-4">
               <div className="p-3 bg-gray-800/50 rounded border border-gray-700/50">
-                <p className="text-xs text-gray-400 mb-1">Nasdaq (QQQ)</p>
+                <p className="text-xs text-gray-400 mb-1">Nasdaq (QQQ) / S&P 500 (SPY)</p>
                 <div className="flex justify-between items-end">
                   <span className="text-lg font-mono font-bold text-white">
-                    ${dashboardData?.heatmap?.find((x: any) => x.ticker === 'QQQ')?.price?.toFixed(2) || '---'}
+                    {(() => {
+                      const qqq = dashboardData?.heatmap?.find((x: any) => x.ticker === 'QQQ');
+                      const spy = dashboardData?.heatmap?.find((x: any) => x.ticker === 'SPY');
+                      const item = qqq || spy;
+                      return item ? `$${item.price.toFixed(2)} (${item.change_percent.toFixed(2)}%)` : 'Loading...';
+                    })()}
                   </span>
                   {/* We didn't fetch QQQ in heatmap strict list, handled in generic */}
                 </div>
               </div>
               {/* Add more widgets here later */}
               <div className="text-xs text-gray-500 italic">
-                AI Signal: "Market is showing resilience in tech sector..."
+                AI Signal: "Market trend analysis based on QQQ/SPY moving averages..."
               </div>
             </div>
           </div>

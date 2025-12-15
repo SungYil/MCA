@@ -88,39 +88,41 @@ class AIService:
 
         prompt = f"""
 [SYSTEM ROLE]
-You are a senior investment analyst for a personal wealth management app. 
-Your goal is to provide a concise, high-quality analysis of a US stock for a Korean user.
-Answer MUST be in Korean.
+You are an equity analyst advising a single private client.
 
-[USER PROFILE]
+[CLIENT PROFILE]
 - Risk Tolerance: {profile.get('risk_tolerance', 'Medium')}
-- Preferred Sectors: {', '.join(profile.get('preferred_sectors', []))}
-- Investment Goal: {profile.get('goal', 'Balanced Growth and Income')}
+- Investment Goal: {profile.get('goal', 'Balanced')}
 
-[STRUCTURED FINANCIAL DATA]
+[STOCK DATA]
 - Ticker: {ticker}
 - Name: {profile_info.get('name', 'Unknown')}
-- Sector: {profile_info.get('sector', 'Unknown')}
-- Current Price: ${price_info.get('price', 0)}
-- Dividend Yield: {div_info.get('div_yield', 0)}%
-- 5Y Growth Rate: {div_info.get('growth_rate_5y', 0)}%
+- Fundamentals: P=${price_info.get('price', 0)}, Div={div_info.get('div_yield', 0)}%, Growth={div_info.get('growth_rate_5y', 0)}%
 - Description: {profile_info.get('description', '')}
 
-[RETRIEVED CONTEXT (News, Notes, Reports)]
+[RECENT NEWS]
 {formatted_context}
 
 [INSTRUCTIONS]
-Based STRICTLY on the data above, generate a report with the following structure:
+Tasks:
+1. Give a forward-looking view for the next 6–12 months, based on:
+   - The fundamentals and growth trends,
+   - Recent news and events,
+   - The client’s risk and income preferences.
+2. For this specific client:
+   - Should this stock be a BUY, HOLD, or REDUCE/SELL candidate?
+   - If held: is the current weight too high, too low, or reasonable?
+3. Rate the FIT between this stock and the client’s profile on a 0–10 scale.
+4. Explain in Korean, structured as:
+   - 섹션 1: 6–12개월 전망 (Scenarios, not guarantees)
+   - 섹션 2: 이 종목과 내 포트폴리오의 궁합 (Fit Score + Reason)
+   - 섹션 3: 액션 플랜 (Buy/Sell/Hold, 비중 조정 제안)
+   - 섹션 4: 주요 리스크 & 모니터링 포인트
 
-1. **한 줄 요약**: 핵심 포인트를 한 문장으로 강력하게 요약.
-2. **배당 분석**: 배당의 안정성, 성장성 평가. (배당주가 아니라면 성장 재투자 관점에서 서술)
-3. **성장 및 비즈니스**: 비즈니스 모델의 견고함과 최근 성장 모멘텀.
-4. **밸류에이션 및 리스크**: 현재 가격 매력도와 [RETRIEVED CONTEXT]에서 언급된 리스크 요인 2~3가지.
-5. **적합도 점수 (0-10점)**: 사용자 프로필과의 적합도.
-6. **최종 의견**: 점수를 준 이유 짧게.
-
-DO NOT invent numbers. If data is missing, mention it.
-Write in a professional yet easy-to-read tone (polite Korean ~해요체 or ~합니다체).
+Constraints:
+- Ground your answer in the provided fundamentals and news.
+- Do not invent specific numbers that are not in the input.
+- Avoid extreme certainty; describe plausible scenarios instead.
 """
         return prompt
 
@@ -137,41 +139,44 @@ Write in a professional yet easy-to-read tone (polite Korean ~해요체 or ~합�
                 total_value += value
                 holdings_text += f"- {item['ticker']}: {item['shares']} shares @ ${item['average_cost']:.2f} (Current: ${item['current_price']:.2f}, Val: ${value:.2f})\n"
 
-            # 2. Build Prompt
+            # 2. Build Prompt (User Requested Format)
             prompt = f"""
 [SYSTEM ROLE]
-You are a highly experienced personal investment consultant.
-Your client has a specific stock portfolio and wants daily advice and a health check.
-Answer MUST be in Korean.
+You are a portfolio manager for a single private client.
 
 [CLIENT PROFILE]
-- Risk Tolerance: {user_profile.get('risk_tolerance', 'Medium')}
-- Investment Goal: {user_profile.get('goal', 'Balanced Growth and Income')}
+- Risk profile: {user_profile.get('risk_tolerance', 'Medium')}
+- Dividend vs growth preference: {user_profile.get('goal', 'Balanced')}
+- Preferred sectors: {', '.join(user_profile.get('preferred_sectors', ['General']))}
 
-[PORTFOLIO SUMMARY]
+[PORTFOLIO SNAPSHOT]
 Total Value: ${total_value:.2f}
 Holdings:
 {holdings_text}
 
 [INSTRUCTIONS]
-Based on the portfolio above, provide a detailed and actionable report:
+Based on the portfolio above, provide a detailed advice report in Korean.
 
-1.  **📊 포트폴리오 정밀 진단 (Weakness Analysis)**: 
-    -   섹터 편중, 배당 안정성, 성장성 부족 등 **취약점**을 날카롭게 지적해주세요.
-    -   "현재 기술주 비중이 80%로 너무 높습니다" 처럼 구체적으로.
+Tasks:
+1. Identify the main WEAKNESSES of this portfolio today, from the perspective of this client’s profile.
+2. Propose a concrete REBALANCING PLAN:
+   - Which positions to trim or exit (with target weight %).
+   - Which positions to increase (with target weight %).
+   - Optional: what percentage of the portfolio can stay in cash.
+3. Suggest up to 3 NEW US stocks that would improve the portfolio balance for this client, based on:
+   - Their dividend/growth preferences,
+   - Current sector/style allocation,
+   - Today’s market conditions.
+4. Explain all of this in Korean, in a concise and structured way:
+   - Section 1: 주요 약점 (Weaknesses)
+   - Section 2: 리밸런싱 제안 (with target weights)
+   - Section 3: 신규 편입 후보 (stock ticker + 2–3 line rationale each)
+   - Section 4: 오늘 꼭 체크해야 할 핵심 포인트 3개
 
-2.  **⚖️ 리밸런싱 제안 (Rebalancing)**:
-    -   현재 포트폴리오 균형을 맞추기 위해 **비중을 줄여야 할 종목**과 **늘려야 할 종목**을 콕 집어주세요.
-    -   예: "AAPL 비중을 10% 줄이고, 방어주인 O를 5% 추가하세요."
-
-3.  **💎 AI 추천 종목 (Stock Gems)**:
-    -   사용자의 투자 성향({user_profile.get('risk_tolerance')} / {user_profile.get('goal')})에 부합하는 **미국 주식 3개**를 추천해주세요.
-    -   각 추천 종목에 대해 **티커(Ticker)**와 **추천 이유**를 명시하세요.
-
-4.  **💡 오늘의 투자 조언**:
-    -   현재 시장 상황을 고려한 단기 대응 전략.
-
-Write in a warm but expert tone (Korean ~해요체/합니다체). Use Markdown formatting strictly.
+Constraints:
+- Use only the provided data and flags. If you need to make assumptions, state them clearly.
+- Do not give absolute guarantees. Use language like "가능성이 높다", "리스크가 커 보인다".
+- Write in a professional, objective tone.
 """
             # 3. Call LLM
             response_text = await self._call_gemini(prompt)
@@ -218,32 +223,31 @@ Write in a warm but expert tone (Korean ~해요체/합니다체). Use Markdown f
 
         prompt = f"""
 [SYSTEM ROLE]
-You are a top-tier financial news anchor (like Bloomberg or CNBC) for a Korean audience.
-Your task is to produce a "Daily Market Briefing" (오늘의 미국 증시 브리핑).
+You are a market anchor and portfolio strategist.
 
-[MARKET DATA]
-Indices: {indices_text}
-
-[TOP NEWS HEADLINES]
+[TODAY'S MARKET DATA]
+- Indices: {indices_text}
+- Top Headlines: 
 {news_text}
 
 [INSTRUCTIONS]
-Based on the data above, write a professional, engaging, and insightful market report in Korean.
+Based on the data above, write a professional market report in Korean.
+
+Tasks:
+1. Explain in Korean why the US market moved the way it did today (main causes).
+2. Explain how today’s market and news might affect a typical simplified growth-focused portfolio (Tech/Growth heavy).
+3. List 3–5 key things investors should pay attention to going forward (e.g., upcoming events, risks, opportunities).
+4. Optional: If there is any urgent risk or clear opportunity that stands out, mention it clearly in a short alert-style sentence.
+
+Tone:
+- Like a calm Bloomberg anchor, but speaking directly to one investor.
+- Clear, concise, not sensational.
+
 Structure:
-
-# 🇺🇸 오늘의 미국 증시 요약
-(Top section: Summarize the overall market sentiment based on indices data. Bullish/Bearish/Mixed?)
-
-## 📰 주요 헤드라인
-(Bulleted list of the most critical news items, rewritten in natural Korean. Filter out noise.)
-
-## 🧐 심층 분석 및 전망
-(Synthesize the news and price action to explain WHY the market moved this way. Provide a short-term outlook.)
-
-## 💡 투자자 체크포인트
-(1-2 key takeaways for personal investors.)
-
-Tone: Professional, Insightful, and Crisp. Use Markdown.
+- 섹션 1: 오늘 미국 시장 한눈에 보기
+- 섹션 2: 내 포트폴리오에 미칠 수 있는 영향 (Growth/Tech 관점)
+- 섹션 3: 앞으로 체크해야 할 포인트
+- 섹션 4: (있다면) 오늘의 경고 또는 기회 한 줄 정리
 """
         return await self._call_gemini(prompt)
 

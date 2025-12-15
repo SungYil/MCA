@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { FullStockData } from '@/types/stock';
 import StockChart from '@/components/StockChart';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function StockDetailPage() {
     const params = useParams();
@@ -252,8 +254,12 @@ export default function StockDetailPage() {
                         )}
 
                         {report && (
-                            <div className="w-full prose prose-invert prose-sm max-w-none">
-                                <div className="whitespace-pre-wrap text-gray-300 leading-relaxed font-sans">{report}</div>
+                            <div className="w-full relative z-10">
+                                <div className="prose prose-invert prose-sm max-w-none text-gray-300 leading-relaxed font-sans">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        {report}
+                                    </ReactMarkdown>
+                                </div>
                             </div>
                         )}
                     </div>
