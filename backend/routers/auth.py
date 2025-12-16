@@ -82,6 +82,7 @@ class GoogleLoginRequest(BaseModel):
 @router.post("/api/auth/google", response_model=Token)
 async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
     try:
+        print(f"DEBUG: Processing Google Login with token: {request.token[:20]}...", flush=True)
         # Verify the ID token
         id_info = id_token.verify_oauth2_token(
             request.token, 
@@ -139,10 +140,11 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
         )
         return {"access_token": access_token, "token_type": "bearer"}
 
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Invalid Google Token")
+    except ValueError as e:
+        print(f"DEBUG: Google Auth ValueError: {str(e)}", flush=True)
+        raise HTTPException(status_code=401, detail=f"Invalid Google Token: {str(e)}")
     except Exception as e:
-        print(f"Google Auth Error: {e}")
+        print(f"Google Auth Error: {e}", flush=True)
         raise HTTPException(status_code=500, detail="Authentication failed")
 
 # Dependency to get current user
