@@ -83,7 +83,15 @@ def get_portfolio(
     """
     Get all portfolio items for the current user.
     Also fetches current price to calculate real-time value.
+    This endpoint also SELF-HEALS by removing any invalid (empty ticker) items.
     """
+    # Self-healing: Delete items with empty tickers for this user
+    db.query(schema.PortfolioItem).filter(
+        schema.PortfolioItem.user_id == current_user.id,
+        (schema.PortfolioItem.ticker == "") | (schema.PortfolioItem.ticker == None)
+    ).delete(synchronize_session=False)
+    db.commit()
+
     items = db.query(schema.PortfolioItem).filter(schema.PortfolioItem.user_id == current_user.id).all()
     
     response_items = []
@@ -124,19 +132,27 @@ def add_to_portfolio(
     Add a transaction to portfolio.
     If ticker exists, updates the average cost and shares (simple weighted average).
     """
-    ticker = request.ticker.upper()
+    ticker = request.ticker.strip().upper()
+    if not ticker:
+        raise HTTPException(status_code=400, detail="Ticker cannot be empty")
     
     # 1. Ensure Stock exists
     stock = db.query(schema.Stock).filter(schema.Stock.ticker == ticker).first()
     if not stock:
         # Fetch data from external service
         profile = stock_service.get_stock_profile(ticker)
+        # Validate that the fetched profile is valid
+        if not profile or not profile.get("name"):
+             # Optional: Allow adding manually if needed, but for now strict
+             # But if stock_service returns empty dict, we should be careful.
+             pass 
+
         price_info = stock_service.get_stock_price(ticker)
         div_info = stock_service.get_dividend_history(ticker)
         
         new_stock = schema.Stock(
             ticker=ticker,
-            name=profile.get("name"),
+            name=profile.get("name") or ticker,
             sector=profile.get("sector"),
             market_cap=profile.get("market_cap"),
             current_price=price_info.get("price"),

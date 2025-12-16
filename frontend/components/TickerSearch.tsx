@@ -75,7 +75,9 @@ export default function TickerSearch({ onSelect }: TickerSearchProps) {
                 className="w-full bg-gray-900 text-white p-3 rounded border border-gray-600 focus:border-blue-500 outline-none transition-colors uppercase"
                 value={query}
                 onChange={(e) => {
-                    setQuery(e.target.value.toUpperCase());
+                    const val = e.target.value.toUpperCase();
+                    setQuery(val);
+                    onSelect(val); // Propagate text input immediately to parent
                     setShowDropdown(true);
                 }}
                 required
