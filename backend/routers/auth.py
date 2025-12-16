@@ -76,19 +76,27 @@ import string
 
 # ... existing imports ...
 
+import logging
+logger = logging.getLogger(__name__)
+
 class GoogleLoginRequest(BaseModel):
     token: str
 
 @router.post("/api/auth/google", response_model=Token)
 async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
     try:
-        print(f"DEBUG: Processing Google Login with token: {request.token[:20]}...", flush=True)
+        logger.info(f"DEBUG: Processing Google Login with token prefix: {request.token[:10]}...")
+        
         # Verify the ID token
-        id_info = id_token.verify_oauth2_token(
-            request.token, 
-            google_requests.Request(), 
-            audience=None # Optional: Specify client ID if needed for strict check
-        )
+        try:
+            id_info = id_token.verify_oauth2_token(
+                request.token, 
+                google_requests.Request(), 
+                audience=None 
+            )
+        except ValueError as e:
+            logger.error(f"DEBUG: Google Auth verification failed: {str(e)}")
+            raise HTTPException(status_code=401, detail=f"Invalid Google Token: {str(e)}")
 
         google_id = id_info['sub']
         email = id_info['email']
@@ -109,7 +117,7 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
                 db.commit()
             else:
                 # Create new user
-                # Generate random password since they use Google
+                # Generates random password for legacy compatibility
                 random_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
                 hashed_password = get_password_hash(random_pass)
                 
@@ -140,11 +148,10 @@ async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db
         )
         return {"access_token": access_token, "token_type": "bearer"}
 
-    except ValueError as e:
-        print(f"DEBUG: Google Auth ValueError: {str(e)}", flush=True)
-        raise HTTPException(status_code=401, detail=f"Invalid Google Token: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Google Auth Error: {e}", flush=True)
+        logger.error(f"Google Auth Error: {e}")
         raise HTTPException(status_code=500, detail="Authentication failed")
 
 # Dependency to get current user

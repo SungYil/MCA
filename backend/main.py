@@ -1,4 +1,13 @@
 from fastapi import FastAPI
+import bcrypt
+# Monkeypatch for passlib 1.7.4 compatibility with bcrypt 4.1.0+
+# (Even if pinned to 4.0.1, this is safe and robust)
+if not hasattr(bcrypt, '__about__'):
+    try:
+        from collections import namedtuple
+        bcrypt.__about__ = namedtuple("About", ["__version__"])(bcrypt.__version__)
+    except Exception:
+        pass
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal
 from models import schema
