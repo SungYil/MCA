@@ -45,8 +45,9 @@ async def analyze_portfolio(
     # 1. Fetch Portfolio Items
     items = db.query(schema.PortfolioItem).filter(schema.PortfolioItem.user_id == current_user.id).all()
     
-    if not items:
-        return {"analysis": "포트폴리오가 비어있어 분석할 수 없습니다. 종목을 먼저 추가해주세요!"}
+    # ALLOW empty items for Cold Start analysis
+    # if not items:
+    #     return {"analysis": "포트폴리오가 비어있어 분석할 수 없습니다. 종목을 먼저 추가해주세요!"}
 
     portfolio_data = []
     for item in items:

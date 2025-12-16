@@ -483,7 +483,11 @@ export default function PortfolioPage() {
 
                         {!analysis && !analyzing && (
                             <div className="text-center py-20 bg-gray-800/30 rounded-xl border border-gray-700/50 border-dashed">
-                                <p className="text-gray-500 text-lg">위 버튼을 눌러 상세한 전략 보고서를 받아보세요.</p>
+                                <p className="text-gray-500 text-lg">
+                                    {items.length === 0
+                                        ? "아직 보유 주식이 없으시군요! 위 버튼을 눌러 AI에게 첫 포트폴리오 추천을 받아보세요."
+                                        : "위 버튼을 눌러 상세한 전략 보고서를 받아보세요."}
+                                </p>
                             </div>
                         )}
                     </div>
