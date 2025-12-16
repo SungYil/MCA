@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import GoogleLoginBtn from '@/components/GoogleLoginBtn';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -80,6 +81,16 @@ export default function LoginPage() {
                         Log In
                     </button>
                 </form>
+
+                <div className="my-6 flex items-center">
+                    <div className="flex-grow border-t border-gray-700"></div>
+                    <span className="flex-shrink-0 mx-4 text-gray-500 text-sm">Or continue with</span>
+                    <div className="flex-grow border-t border-gray-700"></div>
+                </div>
+
+                <div className="mb-6">
+                    <GoogleLoginBtn />
+                </div>
 
                 <div className="mt-4 text-center text-sm text-gray-500">
                     Don't have an account? <a href="/register" className="text-emerald-400 hover:underline">Sign Up</a>

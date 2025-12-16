@@ -140,14 +140,28 @@ Constraints:
                 holdings_text += f"- {item['ticker']}: {item['shares']} shares @ ${item['average_cost']:.2f} (Current: ${item['current_price']:.2f}, Val: ${value:.2f})\n"
 
             # 2. Build Prompt (User Requested Format)
+            # 2. Build Prompt (User Requested Format)
+            # Unpack detailed profile
+            risk = user_profile.get('risk_tolerance', 'Medium')
+            inv_profile = user_profile.get('investment_profile', {})
+            
+            goal = inv_profile.get('primary_goal', 'Balanced Growth')
+            horizon = inv_profile.get('investment_horizon', 'Mid-term')
+            experience = inv_profile.get('experience_level', 'Intermediate')
+            
+            sectors = user_profile.get('preferred_sectors', [])
+            if not sectors: sectors = ['General Balance']
+            
             prompt = f"""
 [SYSTEM ROLE]
-You are a portfolio manager for a single private client.
+You are a highly personalized portfolio manager for a private client.
 
 [CLIENT PROFILE]
-- Risk profile: {user_profile.get('risk_tolerance', 'Medium')}
-- Dividend vs growth preference: {user_profile.get('goal', 'Balanced')}
-- Preferred sectors: {', '.join(user_profile.get('preferred_sectors', ['General']))}
+- Risk Tolerance: {risk}
+- Primary Goal: {goal}
+- Investment Horizon: {horizon}
+- Experience Level: {experience}
+- Preferred Sectors: {', '.join(sectors)}
 
 [PORTFOLIO SNAPSHOT]
 Total Value: ${total_value:.2f}
@@ -155,28 +169,26 @@ Holdings:
 {holdings_text}
 
 [INSTRUCTIONS]
-Based on the portfolio above, provide a detailed advice report in Korean.
+Based on the client's specific profile above, provide a detailed advice report in Korean.
+Use a tone appropriate for a {experience} investor (e.g. explain more concepts if Beginner, go deeper if Expert).
 
 Tasks:
-1. Identify the main WEAKNESSES of this portfolio today, from the perspective of this client’s profile.
+1. Identify the main WEAKNESSES of this portfolio today, specifically considering the '{goal}' goal and '{risk}' tolerance.
 2. Propose a concrete REBALANCING PLAN:
-   - Which positions to trim or exit (with target weight %).
-   - Which positions to increase (with target weight %).
-   - Optional: what percentage of the portfolio can stay in cash.
-3. Suggest up to 3 NEW US stocks that would improve the portfolio balance for this client, based on:
-   - Their dividend/growth preferences,
-   - Current sector/style allocation,
-   - Today’s market conditions.
-4. Explain all of this in Korean, in a concise and structured way:
-   - Section 1: 주요 약점 (Weaknesses)
-   - Section 2: 리밸런싱 제안 (with target weights)
-   - Section 3: 신규 편입 후보 (stock ticker + 2–3 line rationale each)
-   - Section 4: 오늘 꼭 체크해야 할 핵심 포인트 3개
+   - Which positions to trim or exit?
+   - Which positions to increase?
+   - Cash buffer recommendation?
+3. Suggest up to 3 NEW US stocks that fit the '{goal}' strategy:
+   - Consider the '{horizon}' horizon.
+4. Explain in Korean, clearly structured:
+   - Section 1: 주요 약점 (Weaknesses) - 맞춤형 분석
+   - Section 2: 리밸런싱 제안 (Target Weights)
+   - Section 3: 신규 편입 후보 (Rationale tailored to profile)
+   - Section 4: 오늘 체크 포인트
 
 Constraints:
-- Use only the provided data and flags. If you need to make assumptions, state them clearly.
-- Do not give absolute guarantees. Use language like "가능성이 높다", "리스크가 커 보인다".
-- Write in a professional, objective tone.
+- Be objective but personalized.
+- Address the user directly based on their profile.
 """
             # 3. Call LLM
             response_text = await self._call_gemini(prompt)

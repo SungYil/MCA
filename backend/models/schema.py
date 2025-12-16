@@ -20,6 +20,11 @@ class User(Base):
     preferred_sectors = Column(JSON, default=[]) # e.g. ["Technology", "Healthcare"]
     avoided_sectors = Column(JSON, default=[])   # e.g. ["Energy"]
     
+    # Google Auth & Profile
+    google_id = Column(String, unique=True, nullable=True, index=True)
+    profile_picture = Column(String, nullable=True)
+    investment_profile = Column(JSON, default={}) # Detailed survey results
+    
     portfolio_items = relationship("PortfolioItem", back_populates="user")
     watchlist_items = relationship("WatchlistItem", back_populates="user")
 

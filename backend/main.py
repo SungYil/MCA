@@ -37,6 +37,9 @@ app.include_router(auth.router)
 app.include_router(portfolio.router)
 app.include_router(market.router)
 
+from routers import user
+app.include_router(user.router)
+
 
 # Configure CORS
 app.add_middleware(

@@ -69,6 +69,82 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+import random
+import string
+
+# ... existing imports ...
+
+class GoogleLoginRequest(BaseModel):
+    token: str
+
+@router.post("/api/auth/google", response_model=Token)
+async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
+    try:
+        # Verify the ID token
+        id_info = id_token.verify_oauth2_token(
+            request.token, 
+            google_requests.Request(), 
+            audience=None # Optional: Specify client ID if needed for strict check
+        )
+
+        google_id = id_info['sub']
+        email = id_info['email']
+        name = id_info.get('name', email.split('@')[0])
+        picture = id_info.get('picture')
+
+        # Check if user exists by Google ID
+        user = db.query(schema.User).filter(schema.User.google_id == google_id).first()
+        
+        if not user:
+            # Check by email (link account if exists)
+            user = db.query(schema.User).filter(schema.User.email == email).first()
+            if user:
+                # Link existing account
+                user.google_id = google_id
+                if not user.profile_picture:
+                    user.profile_picture = picture
+                db.commit()
+            else:
+                # Create new user
+                # Generate random password since they use Google
+                random_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                hashed_password = get_password_hash(random_pass)
+                
+                # Ensure unique username
+                base_username = name.replace(" ", "").lower()
+                username = base_username
+                counter = 1
+                while db.query(schema.User).filter(schema.User.username == username).first():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
+                user = schema.User(
+                    username=username,
+                    email=email,
+                    hashed_password=hashed_password,
+                    google_id=google_id,
+                    profile_picture=picture
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+
+        # Create JWT
+        access_token_expires = timedelta(minutes=60) # Longer expiry for convenience
+        access_token = create_access_token(
+            data={"sub": user.username, "user_id": user.id},
+            expires_delta=access_token_expires
+        )
+        return {"access_token": access_token, "token_type": "bearer"}
+
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google Token")
+    except Exception as e:
+        print(f"Google Auth Error: {e}")
+        raise HTTPException(status_code=500, detail="Authentication failed")
+
 # Dependency to get current user
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
 

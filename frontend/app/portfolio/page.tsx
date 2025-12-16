@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TickerSearch from '@/components/TickerSearch';
+import OnboardingModal from '@/components/OnboardingModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+// ... interfaces ...
 interface PortfolioItem {
     id: number;
     ticker: string;
@@ -39,6 +41,7 @@ interface DividendProjection {
 export default function PortfolioPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'holdings' | 'analysis' | 'dividends'>('holdings');
+    const [showOnboarding, setShowOnboarding] = useState(false);
 
     // Data States
     const [items, setItems] = useState<PortfolioItem[]>([]);
@@ -56,6 +59,32 @@ export default function PortfolioPage() {
     const [shares, setShares] = useState('');
     const [avgCost, setAvgCost] = useState('');
     const [editingTicker, setEditingTicker] = useState<string | null>(null);
+
+    // Check Onboarding
+    useEffect(() => {
+        const checkProfile = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                const res = await fetch(`${API_URL}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const profile = data.investment_profile || {};
+                    if (!profile.primary_goal) {
+                        setShowOnboarding(true);
+                    }
+                }
+            } catch (e) {
+                console.error("Profile check failed", e);
+            }
+        };
+        checkProfile();
+    }, []);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -559,6 +588,7 @@ export default function PortfolioPage() {
                     </div>
                 )}
             </div>
+            <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
         </main>
     );
 }
