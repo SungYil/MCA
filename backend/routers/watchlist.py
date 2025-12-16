@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from models.schema import WatchlistItem, Stock
+from models.schema import WatchlistItem, Stock, User
 from pydantic import BaseModel
 from typing import List
 from services import stock_service
+from routers.auth import get_current_user
 
 router = APIRouter(
     prefix="/api/watchlist",
@@ -23,22 +24,19 @@ class WatchlistItemResponse(BaseModel):
         from_attributes = True
 
 @router.get("", response_model=List[WatchlistItemResponse])
-def get_watchlist(db: Session = Depends(get_db)):
+def get_watchlist(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Get all items in the watchlist for the current user.
-    (MVP: Hardcoded user_id = 1)
     """
-    user_id = 1 # Mock user ID
-    items = db.query(WatchlistItem).filter(WatchlistItem.user_id == user_id).all()
+    items = db.query(WatchlistItem).filter(WatchlistItem.user_id == current_user.id).all()
     return items
 
 @router.post("", response_model=WatchlistItemResponse)
-def add_to_watchlist(request: WatchlistAddRequest, db: Session = Depends(get_db)):
+def add_to_watchlist(request: WatchlistAddRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Add a ticker to the watchlist.
     Ensures the Stock exists in the DB first.
     """
-    user_id = 1 # Mock user ID
     ticker = request.ticker.upper()
 
     # 1. Check/Ensure Stock exists in 'stocks' table
@@ -63,7 +61,7 @@ def add_to_watchlist(request: WatchlistAddRequest, db: Session = Depends(get_db)
 
     # 2. Check if already in Watchlist
     existing = db.query(WatchlistItem).filter(
-        WatchlistItem.user_id == user_id, 
+        WatchlistItem.user_id == current_user.id, 
         WatchlistItem.ticker == ticker
     ).first()
 
@@ -71,22 +69,21 @@ def add_to_watchlist(request: WatchlistAddRequest, db: Session = Depends(get_db)
         return existing
 
     # 3. Create new Watchlist Item
-    item = WatchlistItem(user_id=user_id, ticker=ticker)
+    item = WatchlistItem(user_id=current_user.id, ticker=ticker)
     db.add(item)
     db.commit()
     db.refresh(item)
     return item
 
 @router.delete("/{ticker}")
-def remove_from_watchlist(ticker: str, db: Session = Depends(get_db)):
+def remove_from_watchlist(ticker: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Remove a ticker from the watchlist.
     """
-    user_id = 1 # Mock user ID
     ticker = ticker.upper()
 
     item = db.query(WatchlistItem).filter(
-        WatchlistItem.user_id == user_id,
+        WatchlistItem.user_id == current_user.id,
         WatchlistItem.ticker == ticker
     ).first()
 

@@ -140,7 +140,6 @@ Constraints:
                 holdings_text += f"- {item['ticker']}: {item['shares']} shares @ ${item['average_cost']:.2f} (Current: ${item['current_price']:.2f}, Val: ${value:.2f})\n"
 
             # 2. Build Prompt (User Requested Format)
-            # 2. Build Prompt (User Requested Format)
             # Unpack detailed profile
             risk = user_profile.get('risk_tolerance', 'Medium')
             inv_profile = user_profile.get('investment_profile', {})
@@ -152,7 +151,44 @@ Constraints:
             sectors = user_profile.get('preferred_sectors', [])
             if not sectors: sectors = ['General Balance']
             
-            prompt = f"""
+            # --- COLD START SCENARIO (Empty Portfolio) ---
+            if not portfolio_items:
+                prompt = f"""
+[SYSTEM ROLE]
+You are a highly personalized portfolio manager helping a new client build their FIRST portfolio.
+
+[CLIENT PROFILE]
+- Risk Tolerance: {risk}
+- Primary Goal: {goal}
+- Investment Horizon: {horizon}
+- Experience Level: {experience}
+- Preferred Sectors: {', '.join(sectors)}
+
+[CURRENT STATUS]
+- Portfolio is currently EMPTY (New Account).
+
+[INSTRUCTIONS]
+Provide a "Starter Portfolio Strategy" in Korean.
+
+Tasks:
+1. Suggest an Asset Allocation strategy suitable for this profile (e.g., Stocks 60%, Bonds 20%, Cash 20%).
+2. Recommend 5 specific US stocks or ETFs to start with, explaining why they fit the '{goal}' goal.
+   - Include a mix of user's preferred sectors ({', '.join(sectors)}) and defensive assets if risk is low.
+3. Explain the "First Step" action plan (e.g., "Buy these 3 stocks first...").
+
+Structure:
+- Section 1: 맞춤형 자산 배분 전략 (Asset Allocation)
+- Section 2: 추천 포트폴리오 (Top 5 Starter Picks)
+- Section 3: 첫 매수 가이드 (Action Plan)
+- Section 4: 초보자를 위한 조언 (Risk Management)
+
+Constraints:
+- Tone: Encouraging, Educational, tailored to {experience}.
+- Be specific with Tickers.
+"""
+            else:
+                # --- EXISTING PORTFOLIO SCENARIO ---
+                prompt = f"""
 [SYSTEM ROLE]
 You are a highly personalized portfolio manager for a private client.
 

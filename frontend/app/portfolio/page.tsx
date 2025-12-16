@@ -450,8 +450,8 @@ export default function PortfolioPage() {
                             </div>
                             <button
                                 onClick={handleAnalyze}
-                                disabled={analyzing || items.length === 0}
-                                className={`px-6 py-3 rounded-lg font-bold transition-all flex items-center gap-2 ${analyzing || items.length === 0
+                                disabled={analyzing}
+                                className={`px-6 py-3 rounded-lg font-bold transition-all flex items-center gap-2 ${analyzing
                                     ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
                                     : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg hover:shadow-purple-500/25 hover:scale-105'
                                     }`}
@@ -462,7 +462,7 @@ export default function PortfolioPage() {
                                     </>
                                 ) : (
                                     <>
-                                        <span>✨</span> AI 보고서 생성
+                                        <span>✨</span> {items.length === 0 ? 'AI 추천 포트폴리오 받기' : 'AI 보고서 생성'}
                                     </>
                                 )}
                             </button>
