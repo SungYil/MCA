@@ -26,6 +26,27 @@ def create_default_user():
     finally:
         db.close()
 
+from sqlalchemy import text
+
+# Migration to add missing columns for Google Auth (Self-Healing)
+def run_migrations():
+    db = SessionLocal()
+    try:
+        print("Checking for schema updates...")
+        # attempt to add columns if they don't exist
+        # Postgres 9.6+ supports IF NOT EXISTS
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR"))
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR"))
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS investment_profile JSON DEFAULT '{}'"))
+        db.commit()
+        print("Schema migration completed.")
+    except Exception as e:
+        print(f"Migration warning (can be ignored if columns exist): {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+run_migrations()
 create_default_user()
 
 app = FastAPI(title="Investment Assistant Backend")
