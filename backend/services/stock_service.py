@@ -29,15 +29,42 @@ class StockService:
         """
         ticker = ticker.upper()
         
+        # 1. SPECIAL ASSET: CASH (USD)
+        if ticker == "USD":
+            return {
+                "ticker": "USD",
+                "name": "US Dollar (Cash)",
+                "sector": "Cash",
+                "description": "Cash holdings in US Dollar.",
+                "market_cap": 0,
+                "exchange": "CASH"
+            }
+
         # Try yfinance first for profile as it has Sector/MarketCap reliably
         try:
             t = yf.Ticker(ticker)
             info = t.info
+            
+            # Map quoteType to meaningful Sectors for non-stocks
+            quote_type = info.get("quoteType", "").upper()
+            sector = info.get("sector")
+            
+            if quote_type == "FUTURE":
+                sector = "Commodities (Future)"
+            elif quote_type == "CRYPTOCURRENCY":
+                sector = "Crypto"
+            elif quote_type == "ETF" and not sector:
+                sector = "ETF"
+            elif quote_type == "CURRENCY":
+                sector = "Forex"
+            elif not sector:
+                sector = "Unknown"
+
             return {
                 "ticker": ticker,
                 "name": info.get("shortName") or info.get("longName") or ticker,
-                "sector": info.get("sector") or "Unknown",
-                "description": info.get("longBusinessSummary") or "No description available.",
+                "sector": sector,
+                "description": info.get("longBusinessSummary") or f"{sector} asset.",
                 "market_cap": info.get("marketCap"),
                 "exchange": info.get("exchange")
             }
