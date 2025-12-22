@@ -360,7 +360,7 @@ export default function PortfolioPage() {
                                         <button
                                             onClick={() => {
                                                 const headers = "Ticker,Shares,Average Cost\n";
-                                                const sample = "AAPL,10,150.00\nCASH,5000,1.00\nGC=F,2,2300.00";
+                                                const sample = "AAPL,10,150.00\nUSD-CASH,5000,1.00\nGC=F,2,2300.00";
                                                 const blob = new Blob([headers + sample], { type: 'text/csv;charset=utf-8;' });
                                                 const link = document.createElement('a');
                                                 link.href = URL.createObjectURL(blob);

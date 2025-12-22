@@ -29,13 +29,13 @@ class StockService:
         """
         ticker = ticker.upper()
         
-        # 1. SPECIAL ASSET: CASH
-        if ticker == "CASH":
+        # 1. SPECIAL ASSET: CASH (USD-CASH)
+        if ticker == "USD-CASH":
             return {
-                "ticker": "CASH",
-                "name": "Cash",
+                "ticker": "USD-CASH",
+                "name": "US Dollar (Cash)",
                 "sector": "Cash",
-                "description": "Virtual Cash Holdings",
+                "description": "Cash holdings in US Dollar.",
                 "market_cap": 0,
                 "exchange": "CASH"
             }
@@ -104,9 +104,9 @@ class StockService:
 
         ticker = ticker.upper()
 
-        # 0. SPECIAL ASSET: CASH
-        # "CASH" is technically Pathward Financial (NASDAQ:CASH), but we hijack it for virtual cash per user request.
-        if ticker == "CASH":
+        # 0. SPECIAL ASSET: CASH (USD-CASH)
+        # Use "USD-CASH" to avoid conflict with "USD" (ProShares Ultra Semiconductors ETF)
+        if ticker == "USD-CASH":
             return {"price": 1.0, "change": 0.0, "change_percent": 0.0, "source": "Fixed"}
 
         # 1. Try Tiingo IEX
