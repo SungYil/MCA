@@ -29,13 +29,13 @@ class StockService:
         """
         ticker = ticker.upper()
         
-        # 1. SPECIAL ASSET: CASH (USD)
-        if ticker == "USD":
+        # 1. SPECIAL ASSET: CASH
+        if ticker == "CASH":
             return {
-                "ticker": "USD",
-                "name": "US Dollar (Cash)",
+                "ticker": "CASH",
+                "name": "Cash",
                 "sector": "Cash",
-                "description": "Cash holdings in US Dollar.",
+                "description": "Virtual Cash Holdings",
                 "market_cap": 0,
                 "exchange": "CASH"
             }
@@ -99,6 +99,15 @@ class StockService:
         2. yfinance (Delayed/Real-time)
         """
         ticker = ticker.upper()
+
+        ticker = ticker.upper()
+
+        ticker = ticker.upper()
+
+        # 0. SPECIAL ASSET: CASH
+        # "CASH" is technically Pathward Financial (NASDAQ:CASH), but we hijack it for virtual cash per user request.
+        if ticker == "CASH":
+            return {"price": 1.0, "change": 0.0, "change_percent": 0.0, "source": "Fixed"}
 
         # 1. Try Tiingo IEX
         if self.api_key:
