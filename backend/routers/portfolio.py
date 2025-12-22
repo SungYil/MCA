@@ -26,16 +26,41 @@ async def upload_portfolio_csv(
     """
     # 1. Read & Parse CSV
     content = await file.read()
-    try:
-        decoded = content.decode('utf-8')
-        # Handle BOM if present
-        if decoded.startswith('\ufeff'):
-            decoded = decoded[1:]
+    
+    decoded = ""
+    # Try decoding with typical encodings
+    for encoding in ['utf-8-sig', 'cp949', 'latin-1']:
+        try:
+            decoded = content.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
             
-        csv_reader = csv.reader(io.StringIO(decoded))
+    if not decoded:
+        raise HTTPException(status_code=400, detail="Could not decode file. Please save as standard CSV (UTF-8).")
+
+    try:
+        # Try to detect format (delimiter etc)
+        # Take a sample, but ensure it's not too small or empty
+        sample = decoded[:2048]
+        try:
+            dialect = csv.Sniffer().sniff(sample)
+            # Sniffer can sometimes fail on single column or very short files, fallback default
+        except csv.Error:
+            dialect = None
+            
+        if dialect:
+            csv_reader = csv.reader(io.StringIO(decoded), dialect)
+        else:
+             # Default fallback
+            csv_reader = csv.reader(io.StringIO(decoded))
+            
         rows = list(csv_reader)
+        print(f"DEBUG CSV: Parsed {len(rows)} rows. Sample: {rows[:2] if rows else 'Empty'}")
+        
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid CSV file: {e}")
+        print(f"CSV Parse Error: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to parse CSV structure: {e}")
 
     if not rows:
          raise HTTPException(status_code=400, detail="CSV file is empty")
