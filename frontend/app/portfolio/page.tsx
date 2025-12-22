@@ -354,54 +354,71 @@ export default function PortfolioPage() {
                             <h2 className="text-lg font-semibold mb-4 text-gray-300 flex justify-between items-center">
                                 <span>{editingTicker ? `매수 기록 수정 (${editingTicker})` : '주식 추가 (수동)'}</span>
 
-                                {/* CSV Upload Button */}
+                                {/* CSV Actions */}
                                 {!editingTicker && (
-                                    <div className="relative">
-                                        <input
-                                            type="file"
-                                            accept=".csv"
-                                            id="csv-upload"
-                                            className="hidden"
-                                            onChange={async (e) => {
-                                                const file = e.target.files?.[0];
-                                                if (!file) return;
-
-                                                if (!confirm("CSV 파일을 업로드하면 기존 포트폴리오가 모두 삭제되고 덮어씌워집니다. 진행하시겠습니까?")) {
-                                                    e.target.value = ''; // Reset
-                                                    return;
-                                                }
-
-                                                const formData = new FormData();
-                                                formData.append('file', file);
-
-                                                const token = localStorage.getItem('token');
-                                                try {
-                                                    const res = await fetch(`${getApiUrl()}/api/portfolio/upload`, {
-                                                        method: 'POST',
-                                                        headers: { 'Authorization': `Bearer ${token}` },
-                                                        body: formData
-                                                    });
-
-                                                    if (res.ok) {
-                                                        alert("성공적으로 업로드되었습니다!");
-                                                        fetchPortfolio();
-                                                        setDividendData(null);
-                                                    } else {
-                                                        const err = await res.json();
-                                                        alert(`업로드 실패: ${err.detail}`);
-                                                    }
-                                                } catch (error) {
-                                                    alert("업로드 중 오류가 발생했습니다.");
-                                                }
-                                                e.target.value = ''; // Reset
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                const headers = "Ticker,Shares,Average Cost\n";
+                                                const sample = "AAPL,10,150.00\nTSLA,5,200.00";
+                                                const blob = new Blob([headers + sample], { type: 'text/csv;charset=utf-8;' });
+                                                const link = document.createElement('a');
+                                                link.href = URL.createObjectURL(blob);
+                                                link.download = "portfolio_template.csv";
+                                                link.click();
                                             }}
-                                        />
-                                        <label
-                                            htmlFor="csv-upload"
-                                            className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1"
+                                            className="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1"
                                         >
-                                            📂 CSV로 올리기
-                                        </label>
+                                            💾 템플릿 다운로드
+                                        </button>
+
+                                        <div className="relative">
+                                            <input
+                                                type="file"
+                                                accept=".csv"
+                                                id="csv-upload"
+                                                className="hidden"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+
+                                                    if (!confirm("CSV 파일을 업로드하면 기존 포트폴리오가 모두 삭제되고 덮어씌워집니다. 진행하시겠습니까?")) {
+                                                        e.target.value = ''; // Reset
+                                                        return;
+                                                    }
+
+                                                    const formData = new FormData();
+                                                    formData.append('file', file);
+
+                                                    const token = localStorage.getItem('token');
+                                                    try {
+                                                        const res = await fetch(`${getApiUrl()}/api/portfolio/upload`, {
+                                                            method: 'POST',
+                                                            headers: { 'Authorization': `Bearer ${token}` },
+                                                            body: formData
+                                                        });
+
+                                                        if (res.ok) {
+                                                            alert("성공적으로 업로드되었습니다!");
+                                                            fetchPortfolio();
+                                                            setDividendData(null);
+                                                        } else {
+                                                            const err = await res.json();
+                                                            alert(`업로드 실패: ${err.detail}`);
+                                                        }
+                                                    } catch (error) {
+                                                        alert("업로드 중 오류가 발생했습니다.");
+                                                    }
+                                                    e.target.value = ''; // Reset
+                                                }}
+                                            />
+                                            <label
+                                                htmlFor="csv-upload"
+                                                className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-1"
+                                            >
+                                                📂 CSV로 올리기
+                                            </label>
+                                        </div>
                                     </div>
                                 )}
                             </h2>
