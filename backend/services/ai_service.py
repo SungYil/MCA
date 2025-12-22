@@ -126,9 +126,9 @@ Constraints:
 """
         return prompt
 
-    async def analyze_portfolio(self, portfolio_items: List[Dict[str, Any]], user_profile: Dict[str, Any]) -> str:
+    async def analyze_portfolio(self, portfolio_items: List[Dict[str, Any]], user_profile: Dict[str, Any], market_news: List[Dict[str, Any]] = []) -> str:
         """
-        Generates a personalized daily advice report based on the user's portfolio.
+        Generates a personalized daily advice report based on the user's portfolio and market news.
         """
         try:
             # 1. Summarize Portfolio Context
@@ -138,6 +138,15 @@ Constraints:
                 value = item['shares'] * item['current_price']
                 total_value += value
                 holdings_text += f"- {item['ticker']}: {item['shares']} shares @ ${item['average_cost']:.2f} (Current: ${item['current_price']:.2f}, Val: ${value:.2f})\n"
+
+            # Format Market News
+            news_text = "No specific market news available today."
+            if market_news:
+                news_lines = []
+                for n in market_news:
+                    date_str = str(n.get('publishedDate'))[:10]
+                    news_lines.append(f"- [{date_str}] {n.get('title')} ({n.get('source')})")
+                news_text = "\n".join(news_lines)
 
             # 2. Build Prompt (User Requested Format)
             # Unpack detailed profile
@@ -164,15 +173,19 @@ You are a highly personalized portfolio manager helping a new client build their
 - Experience Level: {experience}
 - Preferred Sectors: {', '.join(sectors)}
 
+[CURRENT MARKET CONTEXT]
+The following are the latest key market headlines. Use this to ensure your recommendations are timely.
+{news_text}
+
 [CURRENT STATUS]
 - Portfolio is currently EMPTY (New Account).
 
 [INSTRUCTIONS]
-Provide a "Starter Portfolio Strategy" in Korean.
+Provide a "Starter Portfolio Strategy" in Korean, CONSIDERING THE CURRENT MARKET CONTEXT above.
 
 Tasks:
 1. Suggest an Asset Allocation strategy suitable for this profile (e.g., Stocks 60%, Bonds 20%, Cash 20%).
-2. Recommend 5 specific US stocks or ETFs to start with, explaining why they fit the '{goal}' goal.
+2. Recommend 5 specific US stocks or ETFs to start with, explaining why they fit the '{goal}' goal AND the current market situation.
    - Include a mix of user's preferred sectors ({', '.join(sectors)}) and defensive assets if risk is low.
 3. Explain the "First Step" action plan (e.g., "Buy these 3 stocks first...").
 
@@ -180,7 +193,7 @@ Structure:
 - Section 1: 맞춤형 자산 배분 전략 (Asset Allocation)
 - Section 2: 추천 포트폴리오 (Top 5 Starter Picks)
 - Section 3: 첫 매수 가이드 (Action Plan)
-- Section 4: 초보자를 위한 조언 (Risk Management)
+- Section 4: 초보자를 위한 조언 (Risk Management given current market)
 
 Constraints:
 - Tone: Encouraging, Educational, tailored to {experience}.
@@ -199,32 +212,39 @@ You are a highly personalized portfolio manager for a private client.
 - Experience Level: {experience}
 - Preferred Sectors: {', '.join(sectors)}
 
+[CURRENT MARKET CONTEXT]
+The following are the latest key market headlines. Use this to ensure your advice is timely.
+{news_text}
+
 [PORTFOLIO SNAPSHOT]
 Total Value: ${total_value:.2f}
 Holdings:
 {holdings_text}
 
 [INSTRUCTIONS]
-Based on the client's specific profile above, provide a detailed advice report in Korean.
+Based on the client's specific profile AND the current market news above, provide a detailed advice report in Korean.
 Use a tone appropriate for a {experience} investor (e.g. explain more concepts if Beginner, go deeper if Expert).
 
 Tasks:
 1. Identify the main WEAKNESSES of this portfolio today, specifically considering the '{goal}' goal and '{risk}' tolerance.
-2. Propose a concrete REBALANCING PLAN:
+2. Analyze how the [CURRENT MARKET CONTEXT] affects this specific portfolio (e.g. "Given the recent inflation news, your Tech holdings might be volatile").
+3. Propose a concrete REBALANCING PLAN:
    - Which positions to trim or exit?
    - Which positions to increase?
    - Cash buffer recommendation?
-3. Suggest up to 3 NEW US stocks that fit the '{goal}' strategy:
+4. Suggest up to 3 NEW US stocks that fit the '{goal}' strategy:
    - Consider the '{horizon}' horizon.
-4. Explain in Korean, clearly structured:
+5. Explain in Korean, clearly structured:
    - Section 1: 주요 약점 (Weaknesses) - 맞춤형 분석
-   - Section 2: 리밸런싱 제안 (Target Weights)
-   - Section 3: 신규 편입 후보 (Rationale tailored to profile)
-   - Section 4: 오늘 체크 포인트
+   - Section 2: 시장 상황 반영 분석 (Market Context Impact)
+   - Section 3: 리밸런싱 제안 (Target Weights)
+   - Section 4: 신규 편입 후보 (Rationale tailored to profile & market)
+   - Section 5: 오늘 체크 포인트
 
 Constraints:
 - Be objective but personalized.
 - Address the user directly based on their profile.
+- Explicitly reference the news provided if relevant.
 """
             # 3. Call LLM
             response_text = await self._call_gemini(prompt)

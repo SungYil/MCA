@@ -71,8 +71,16 @@ async def analyze_portfolio(
         # "goal": current_user.investment_goal # assuming this field exists or defaults
     }
 
-    # 3. Call AI Service
-    analysis_text = await ai_service.ai_service.analyze_portfolio(portfolio_data, user_profile)
+    # 3. Fetch Market Context (News)
+    try:
+        # Use SPY as a proxy for general US market news
+        market_news = stock_service.get_stock_news("SPY", limit=5)
+    except Exception as e:
+        print(f"Error fetching market news: {e}")
+        market_news = []
+
+    # 4. Call AI Service
+    analysis_text = await ai_service.ai_service.analyze_portfolio(portfolio_data, user_profile, market_news)
     
     return {"analysis": analysis_text}
 
