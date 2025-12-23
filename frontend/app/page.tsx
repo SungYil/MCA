@@ -87,6 +87,7 @@ export default function Home() {
               { name: 'Portfolio', path: '/portfolio', active: false },
               { name: 'Watchlist', path: '/watchlist', active: false },
               { name: 'AI Analysis', path: '/analysis', active: false },
+              { name: 'Settings', path: '/settings', active: false },
             ].map((item) => (
               <button
                 key={item.name}
