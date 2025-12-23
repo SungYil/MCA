@@ -103,26 +103,32 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-6">
+            {dashboardData?.exchange_rate && (
+              <div className="hidden xl:flex items-center gap-3 bg-gray-800/60 px-4 py-2 rounded-full border border-gray-700/50">
+                <span className="text-gray-400 font-medium text-sm">USD/KRW</span>
+                <div className="flex items-baseline">
+                  <span className="text-emerald-500 font-bold text-sm mr-1">₩</span>
+                  <span className="text-emerald-400 font-mono font-bold text-lg leading-none">
+                    {dashboardData.exchange_rate.toFixed(1)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="hidden lg:block relative top-0.5">
+              <LiveClock />
+            </div>
+
             {/* Logout Button */}
             <button
               onClick={() => {
                 localStorage.removeItem('token');
                 router.push('/login');
               }}
-              className="px-4 py-2 rounded-xl text-sm font-bold text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all"
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-400 bg-red-500/5 border border-red-500/20 hover:bg-red-500/10 transition-all opacity-80 hover:opacity-100"
             >
               Logout
             </button>
-
-            {dashboardData?.exchange_rate && (
-              <div className="hidden xl:flex items-center gap-3 text-base bg-gray-800/60 px-4 py-2 rounded-full border border-gray-700/50">
-                <span className="text-gray-400 font-medium">USD/KRW</span>
-                <span className="text-emerald-400 font-mono font-bold">₩{dashboardData.exchange_rate.toFixed(1)}</span>
-              </div>
-            )}
-            <div className="hidden lg:block transform scale-110 origin-right">
-              <LiveClock />
-            </div>
           </div>
         </div>
       </header>
