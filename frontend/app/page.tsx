@@ -103,6 +103,17 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-6">
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                localStorage.removeItem('token');
+                router.push('/login');
+              }}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all"
+            >
+              Logout
+            </button>
+
             {dashboardData?.exchange_rate && (
               <div className="hidden xl:flex items-center gap-3 text-base bg-gray-800/60 px-4 py-2 rounded-full border border-gray-700/50">
                 <span className="text-gray-400 font-medium">USD/KRW</span>
