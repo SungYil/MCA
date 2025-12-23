@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LiveClock from '../components/LiveClock';
 import MarketMap from '../components/MarketMap';
+import OnboardingModal from '../components/OnboardingModal';
 
 export default function Home() {
   const router = useRouter();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     // Auth Check
@@ -19,16 +21,36 @@ export default function Home() {
       return;
     }
 
-    // Fetch Dashboard Data
+    // Fetch Dashboard Data & User Profile
     const fetchData = async () => {
       try {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-        const res = await fetch(`${API_URL}/api/market/dashboard`);
-        if (res.ok) {
-          const data = await res.json();
+        // Parallel Fetch: Market Data & User Profile
+        const [marketRes, userRes] = await Promise.all([
+          fetch(`${API_URL}/api/market/dashboard`),
+          fetch(`${API_URL}/api/user/profile`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        ]);
+
+        if (marketRes.ok) {
+          const data = await marketRes.json();
           setDashboardData(data);
         }
+
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          // Check if investment profile is empty
+          if (!userData.investment_profile || Object.keys(userData.investment_profile).length === 0) {
+            setShowOnboarding(true);
+          }
+        } else if (userRes.status === 401) {
+          // Token invalid
+          localStorage.removeItem('token');
+          router.push('/login');
+        }
+
       } catch (e) {
         console.error("Dashboard fetch failed", e);
       } finally {
@@ -45,6 +67,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-gray-200">
+      <OnboardingModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
+
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-gray-900/90 border-b border-gray-800 shadow-md">
         <div className="max-w-[1600px] mx-auto px-8 h-20 flex items-center justify-between">
@@ -68,8 +92,8 @@ export default function Home() {
                 key={item.name}
                 onClick={() => router.push(item.path)}
                 className={`px-6 py-2.5 rounded-xl text-base font-bold transition-all ${item.active
-                    ? 'bg-emerald-500/10 text-emerald-400 shadow-sm border border-emerald-500/20'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700/60'
+                  ? 'bg-emerald-500/10 text-emerald-400 shadow-sm border border-emerald-500/20'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-700/60'
                   }`}
               >
                 {item.name}
